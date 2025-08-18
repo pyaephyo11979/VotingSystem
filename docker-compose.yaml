@@ -1,0 +1,78 @@
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: p@ssw0rd
+      MYSQL_DATABASE: votingdb
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./rmi-server/src/main/resources/init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      MINIO_ROOT_USER: voting-system
+      MINIO_ROOT_PASSWORD: p@ssw0rd
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  rmi-server:
+    build:
+      context: ./rmi-server
+      dockerfile: Dockerfile
+    ports:
+      - "1099:1099"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=votingdb
+      - DB_USER=root
+      - DB_PASSWORD=p@ssw0rd
+    restart: unless-stopped
+
+  api-bridge:
+    build:
+      context: ./api-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - rmi-server
+    environment:
+      - RMI_HOST=rmi-server
+      - RMI_PORT=1099
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-bridge
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  minio_data:
