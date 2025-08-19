@@ -1,8 +1,19 @@
+import { Card,CardContent,CardDescription,CardAction,CardFooter,CardHeader,CardTitle } from "./components/ui/card";
 function App() {
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-      {/* Header */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Title</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Card Content</p>
+        </CardContent>
+        <CardFooter>
+          <p>Footer</p>
+        </CardFooter>
+      </Card>
+      Header
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">
           UCSPathein Voting System<span className="ml-1">🎓</span>
@@ -39,4 +50,4 @@ function App() {
   )
 }
 
-export default App
+export default App;
