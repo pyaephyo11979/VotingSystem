@@ -1,19 +1,13 @@
-import { Card,CardContent,CardDescription,CardAction,CardFooter,CardHeader,CardTitle } from "./components/ui/card";
+import EventCreatedCard from "./components/ui/event_card";
+import { useState } from "react";
+
+
 function App() {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center">
-      <Card>
-        <CardHeader>
-          <CardTitle>Title</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Card Content</p>
-        </CardContent>
-        <CardFooter>
-          <p>Footer</p>
-        </CardFooter>
-      </Card>
-      Header
+
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">
           UCSPathein Voting System<span className="ml-1">🎓</span>
@@ -24,9 +18,11 @@ function App() {
           </button>
           <button className="bg-gray-900 text-white px-4 py-1 rounded hover:bg-gray-700">
             Login
-          </button>
+          </button> 
         </div>
       </header>
+    
+      {open && <EventCreatedCard setOpen={setOpen}/>}
 
       {/* Main Content */}
       <main className="flex flex-col items-center justify-center flex-1">
@@ -41,13 +37,13 @@ function App() {
             placeholder="Event Name"
             className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <button className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">
+          <button onClick={() => setOpen(true)} className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700">
             Create Event
           </button>
         </div>
       </main>
     </div>
-  )
+  );
 }
 
 export default App;
