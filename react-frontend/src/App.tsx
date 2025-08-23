@@ -1,9 +1,14 @@
 import EventCreatedCard from "./components/ui/event_card";
 import { useState } from "react";
+import { SwitchTransition, CSSTransition } from "react-transition-group";
+import { useRef } from "react";
+import './fade.css';
+
 
 
 function App() {
   const [open, setOpen] = useState(false);
+  const nodeRef = useRef(null);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center">
@@ -21,9 +26,16 @@ function App() {
           </button> 
         </div>
       </header>
-    
-      {open && <EventCreatedCard setOpen={setOpen}/>}
 
+      <SwitchTransition>
+        <CSSTransition key={open ? "show" : "hide"} timeout={200} classNames='fade' nodeRef={nodeRef} >
+          <div ref={nodeRef} className="max-w-6xl mx-auto p-3">
+            {open && <EventCreatedCard setOpen={setOpen}/>}
+          </div>
+        </CSSTransition>
+      </SwitchTransition>
+      
+    
       {/* Main Content */}
       <main className="flex flex-col items-center justify-center flex-1">
         {/* Logo */}
