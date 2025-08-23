@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SwitchTransition, CSSTransition } from "react-transition-group";
 import { useRef } from "react";
 import './fade.css';
-
+// import { LoginCard } from "./components/ui/login";
 
 
 function App() {
@@ -26,7 +26,9 @@ function App() {
           </button> 
         </div>
       </header>
-
+    
+      {/* <LoginCard/> */}
+      
       <SwitchTransition>
         <CSSTransition key={open ? "show" : "hide"} timeout={200} classNames='fade' nodeRef={nodeRef} >
           <div ref={nodeRef} className="max-w-6xl mx-auto p-3">
