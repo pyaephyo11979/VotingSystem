@@ -78,13 +78,18 @@ public class DBController {
     }
 
     public boolean validateUser(String userId, String password) {
-        String query = "SELECT * FROM users WHERE id = ? AND password = ?";
-        try (Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(query)) {
+        // Can't compare encrypted values because a new random IV is used each encryption.
+        String query = "SELECT password FROM users WHERE id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, userId);
-            stmt.setString(2, encryptPassword(password));
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String encPassword = rs.getString("password");
+                    String decrypted = decryptPassword(encPassword);
+                    return decrypted.equals(password);
+                }
+                return false;
+            }
         } catch (Exception e) {
             System.err.println("❌ Database error in validateUser: " + e.getMessage());
             e.printStackTrace();
@@ -92,24 +97,28 @@ public class DBController {
         }
     }
 
-    public Map<String, String> getUserInfo(String userId, String password) {
-        String query = "SELECT u.id, u.event_id, e.name as event_name, e.password as event_password FROM users u " +
-                "JOIN events e ON u.event_id = e.id WHERE u.id = ? AND u.password = ?";
-        try (Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, userId);
-            stmt.setString(2, encryptPassword(password));
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                Map<String, String> userInfo = new HashMap<>();
-                userInfo.put("userId", rs.getString("id"));
-                userInfo.put("eventId", rs.getString("event_id"));
-                userInfo.put("eventName", rs.getString("event_name"));
-                userInfo.put("eventPassword", rs.getString("event_password"));
-                return userInfo;
+    public Map<String, String> getUserInfo(String username, String password) {
+        // Fetch stored encrypted password then decrypt for comparison.
+        String query = "SELECT u.id, u.event_id, u.password as enc_password, e.name as event_name, e.password as event_password " +
+                "FROM users u JOIN events e ON u.event_id = e.id WHERE u.username = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String encPassword = rs.getString("enc_password");
+                    String decrypted = decryptPassword(encPassword);
+                    if (!decrypted.equals(password)) {
+                        return null; // password mismatch
+                    }
+                    Map<String, String> userInfo = new HashMap<>();
+                    userInfo.put("userId", rs.getString("id"));
+                    userInfo.put("eventId", rs.getString("event_id"));
+                    userInfo.put("eventName", rs.getString("event_name"));
+                    userInfo.put("eventPassword", rs.getString("event_password"));
+                    return userInfo;
+                }
+                return null;
             }
-            return null;
         } catch (Exception e) {
             System.err.println("❌ Database error in getUserInfo: " + e.getMessage());
             e.printStackTrace();
@@ -168,14 +177,14 @@ public class DBController {
 
     public Map<String, String> getUserAccounts(String eventId) {
         Map<String, String> userAccounts = new HashMap<>();
-        String query = "SELECT id,password FROM users WHERE event_id = ?";
+        String query = "SELECT username,password FROM users WHERE event_id = ?";
         try (Connection conn = getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, eventId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 String psw = decryptPassword(rs.getString("password"));
-                userAccounts.put(rs.getString("id"), psw);
+                userAccounts.put(rs.getString("username"), psw);
             }
         } catch (Exception e) {
             System.err.println("❌ Database error in getUserAccounts: " + e.getMessage());

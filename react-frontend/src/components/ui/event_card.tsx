@@ -1,8 +1,14 @@
-// import { useState } from "react";
-// import { X } from "lucide-react";
+import { useState } from "react";
 
-export default function EventCreatedCard({setOpen}) {
-  //   const [open, setOpen] = useState(true);
+export default function EventCreatedCard({ event, setOpen }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const credentials = `Event ID: ${event.eventId}\nPassword: ${event.eventPassword}`;
+    navigator.clipboard.writeText(credentials);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/30">
@@ -41,7 +47,7 @@ export default function EventCreatedCard({setOpen}) {
           </label>
           <input
             type="text"
-            value="ABC123"
+            value={event.eventId}
             readOnly
             className="flex-1 px-3 py-2 border rounded-md bg-gray-50 text-gray-900 focus:outline-none"
           />
@@ -54,15 +60,18 @@ export default function EventCreatedCard({setOpen}) {
           </label>
           <input
             type="text"
-            value="p@ssw0rd"
+            value={event.eventPassword}
             readOnly
             className="flex-1 px-3 py-2 border rounded-md bg-gray-50 text-gray-900 focus:outline-none"
           />
         </div>
 
         {/* Copy Button */}
-        <button className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800">
-          Copy
+        <button
+          onClick={handleCopy}
+          className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800"
+        >
+          {copied ? "Copied!" : "Copy"}
         </button>
       </div>
     </div>

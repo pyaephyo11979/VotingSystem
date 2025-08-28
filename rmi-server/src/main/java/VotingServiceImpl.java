@@ -155,7 +155,7 @@ public class VotingServiceImpl extends UnicastRemoteObject implements VotingServ
         Map<Integer, String> indexedAccounts = new HashMap<>();
         int index = 0;
         for (Map.Entry<String, String> entry : userAccounts.entrySet()) {
-            indexedAccounts.put(index++, "ID: " + entry.getKey() + " | Password: " + entry.getValue());
+            indexedAccounts.put(index++, "Username: " + entry.getKey() + " | Password: " + entry.getValue());
         }
         return indexedAccounts;
     }

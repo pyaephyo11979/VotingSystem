@@ -132,18 +132,22 @@ public class VotingController {
     public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> payload) throws RemoteException {
         String username = payload.get("username");
         String password = payload.get("password");
-        Map<String, String> userInfo = votingService.Login(username, password);
-
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Login successful");
-        response.put("username", username);
-        response.put("status", "authenticated");
-        response.put("userId", userInfo.get("userId"));
-        response.put("eventId", userInfo.get("eventId"));
-        response.put("eventName", userInfo.get("eventName"));
-        response.put("eventPassword", userInfo.get("eventPassword"));
-
-        return ResponseEntity.ok(response);
+        try {
+            Map<String, String> userInfo = votingService.Login(username, password);
+            response.put("message", "Login successful");
+            response.put("username", username);
+            response.put("status", "authenticated");
+            response.put("userId", userInfo.get("userId"));
+            response.put("eventId", userInfo.get("eventId"));
+            response.put("eventName", userInfo.get("eventName"));
+            response.put("eventPassword", userInfo.get("eventPassword"));
+            return ResponseEntity.ok(response);
+        } catch (RemoteException e) {
+            response.put("message", "Invalid credentials");
+            response.put("status", "unauthorized");
+            return ResponseEntity.status(401).body(response);
+        }
     }
 
     @GetMapping("/{eventId}/vote-status/{userId}")
