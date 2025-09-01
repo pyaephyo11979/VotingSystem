@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-export default function EventCreatedCard({ event, setOpen }) {
+interface EventInfoProps { event: { eventId: string; eventPassword: string; eventName?: string }; setOpen: (open: boolean)=>void }
+
+export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
 
   const handleCopy = () => {
     const credentials = `Event ID: ${event.eventId}\nPassword: ${event.eventPassword}`;
@@ -66,13 +70,21 @@ export default function EventCreatedCard({ event, setOpen }) {
           />
         </div>
 
-        {/* Copy Button */}
-        <button
-          onClick={handleCopy}
-          className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800"
-        >
-          {copied ? "Copied!" : "Copy"}
-        </button>
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <button
+            onClick={handleCopy}
+            className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+          <button
+            onClick={() => navigate(`/admin/${event.eventId}`)}
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
+            Go to Dashboard
+          </button>
+        </div>
       </div>
     </div>
   );

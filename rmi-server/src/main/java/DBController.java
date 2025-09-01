@@ -160,6 +160,7 @@ public class DBController {
     }
 
     public boolean addCandidate(String eventId, String candidateName, byte[] photo) {
+        // Expect table 'candidates.photo' to be a (LONG)BLOB to store raw bytes.
         String query = "INSERT INTO candidates (event_id, name, photo) VALUES (?, ?, ?)";
         try (Connection conn = getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -195,11 +196,11 @@ public class DBController {
 
     public List<Map<String, String>> getCandidates(String eventId) {
         List<Map<String, String>> candidates = new ArrayList<>();
-        String query = "SELECT c.id, c.name, COUNT(v.candidate_id) as votes " +
+        String query = "SELECT c.id, c.name, c.photo, COUNT(v.candidate_id) as votes " +
                 "FROM candidates c " +
                 "LEFT JOIN votes v ON c.id = v.candidate_id AND v.event_id = ? " +
                 "WHERE c.event_id = ? " +
-                "GROUP BY c.id, c.name";
+                "GROUP BY c.id, c.name, c.photo";
         try (Connection conn = getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, eventId);
@@ -210,6 +211,12 @@ public class DBController {
                 candidate.put("id", rs.getString("id"));
                 candidate.put("name", rs.getString("name"));
                 candidate.put("votes", rs.getString("votes"));
+                try {
+                    byte[] bytes = rs.getBytes("photo");
+                    if (bytes != null && bytes.length > 0) {
+                        candidate.put("photoBase64", Base64.getEncoder().encodeToString(bytes));
+                    }
+                } catch (Exception ignored) {}
                 candidates.add(candidate);
             }
         } catch (Exception e) {
@@ -217,6 +224,22 @@ public class DBController {
             e.printStackTrace();
         }
         return candidates;
+    }
+
+    public String getEventPassword(String eventId) {
+        String query = "SELECT password FROM events WHERE id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, eventId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("password");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Database error in getEventPassword: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public boolean castVote(String userId, String eventId, String candidateId) {

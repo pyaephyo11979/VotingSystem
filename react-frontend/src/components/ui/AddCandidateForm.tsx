@@ -1,13 +1,15 @@
 import { useState } from "react";
+import type { FormEvent, ChangeEvent } from "react";
 import { addCandidates } from "@/utils/api";
 
-const AddCandidateForm = ({ eventId, onCandidateAdded }) => {
+interface Props { eventId: string; onCandidateAdded: (c: {candidateId:string; eventId:string; name:string; hasPhoto:boolean}) => void }
+const AddCandidateForm = ({ eventId, onCandidateAdded }: Props) => {
   const [name, setName] = useState("");
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState<File|null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -17,8 +19,8 @@ const AddCandidateForm = ({ eventId, onCandidateAdded }) => {
       onCandidateAdded(data);
       setName("");
       setPhoto(null);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add candidate");
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +39,7 @@ const AddCandidateForm = ({ eventId, onCandidateAdded }) => {
         />
         <input
           type="file"
-          onChange={(e) => setPhoto(e.target.files[0])}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setPhoto(e.target.files?.[0] || null)}
           className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button type="submit" className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" disabled={isLoading}>

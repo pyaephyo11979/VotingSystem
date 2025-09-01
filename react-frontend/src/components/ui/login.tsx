@@ -18,13 +18,15 @@ export function LoginCard() {
     setError("");
     setLoading(true);
     try {
-      const res = await loginUser(username, password);
-      // Persist credentials needed for voting actions
-      localStorage.setItem("username", username);
-      if (res.userId) localStorage.setItem("userId", res.userId);
-      if (res.eventId) localStorage.setItem("eventId", res.eventId);
-      if (res.eventPassword) localStorage.setItem("eventPassword", res.eventPassword);
-      navigate("/vote");
+  const res = await loginUser(username, password);
+  localStorage.setItem("username", username);
+  if (res.userId) localStorage.setItem("userId", res.userId);
+  if (res.eventId) localStorage.setItem("eventId", res.eventId);
+  if (res.eventPassword) localStorage.setItem("eventPassword", res.eventPassword);
+  // Build eventData so admin navigation works instantly
+  const eventData = { eventId: res.eventId, eventPassword: res.eventPassword, eventName: res.eventName };
+  try { localStorage.setItem('eventData', JSON.stringify(eventData)); } catch {/* ignore */ }
+  setTimeout(()=>navigate("/vote"), 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally { setLoading(false); }

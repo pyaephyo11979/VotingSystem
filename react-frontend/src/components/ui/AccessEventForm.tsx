@@ -1,29 +1,41 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 import { getCandidates } from "@/utils/api";
+import { useToast } from "@/components/ui/useToast";
 
+interface EventData { eventId: string; eventPassword: string }
 const AccessEventForm = () => {
-  const { setEventData } = useOutletContext();
+  const { setEventData } = useOutletContext<{ setEventData: (d: EventData)=>void }>();
   const navigate = useNavigate();
   const [eventId, setEventId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { show } = useToast();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!eventId || !password) {
+      setError("Both Event ID and Password required");
+      show("Provide Event ID and Password", { type: 'warning' });
+      return;
+    }
+    if (isLoading) return; // prevent rapid double submits
     setIsLoading(true);
     setError("");
 
     try {
       // We use getCandidates to verify the credentials
       await getCandidates(eventId, password);
-      const eventData = { eventId, password };
+      const eventData: EventData = { eventId, eventPassword: password };
       setEventData(eventData);
       localStorage.setItem("eventData", JSON.stringify(eventData));
+      show("Event accessed", { type: 'success' });
       navigate(`/admin/${eventId}`);
-    } catch (error) {
+    } catch (e) {
       setError("Invalid Event ID or Password");
+      show(e instanceof Error ? e.message : "Access failed", { type: 'error' });
     }
     finally {
       setIsLoading(false);

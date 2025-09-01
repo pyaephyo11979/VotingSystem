@@ -5,15 +5,16 @@ import AddCandidateForm from "@/components/ui/AddCandidateForm";
 import CandidateList from "@/components/ui/CandidateList";
 import AccountsSection from "@/components/ui/AccountsSection";
 import ResultsSection from "@/components/ui/ResultsSection";
+import { Link } from 'react-router-dom';
 import VoteStatusChecker from "@/components/ui/VoteStatusChecker";
 
-interface EventData { eventId: string; eventName: string; eventPassword: string; }
+interface EventData { eventId: string; eventName?: string; eventPassword?: string; }
 interface Candidate { id: string; name: string; photo?: string | null; }
-interface OutletCtx { eventData: EventData | null; }
+interface OutletCtx { eventData: EventData | null; setEventData: (v: EventData|null)=>void }
 
 const AdminDashboard = () => {
   const { eventId: eventIdFromUrl } = useParams();
-  const { eventData } = useOutletContext<OutletCtx>();
+  const { eventData, setEventData } = useOutletContext<OutletCtx>();
   const eventId = eventIdFromUrl || eventData?.eventId;
   // eventData persists from create event response: {eventId, eventName, eventPassword}
   const password = eventData?.eventPassword;
@@ -42,8 +43,11 @@ const AdminDashboard = () => {
     }
   }, [eventId, password]);
 
-  const handleCandidateAdded = (newCandidate: Candidate) => {
-    setCandidates([...candidates, newCandidate]);
+  const handleCandidateAdded = (newCandidate: {candidateId:string; name:string; hasPhoto:boolean}) => {
+    setCandidates(prev => ([
+      ...prev,
+      { id: newCandidate.candidateId, name: newCandidate.name, photo: newCandidate.hasPhoto ? "" : undefined }
+    ]));
   };
 
   const handleLogout = () => {
@@ -52,6 +56,7 @@ const AdminDashboard = () => {
       localStorage.removeItem("eventId");
       localStorage.removeItem("eventPassword");
     } catch {/* ignore */}
+    setEventData(null);
     navigate("/");
   };
 
@@ -74,7 +79,10 @@ const AdminDashboard = () => {
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
           <h2 className="text-lg font-medium">Event ID: {eventId}</h2>
         </div>
-        <button onClick={handleLogout} className="px-3 py-1 h-fit rounded bg-red-600 text-white text-sm hover:bg-red-700">Logout</button>
+        <div className='flex gap-2'>
+          {eventId && <Link to={`/results/${eventId}`} className='px-3 py-1 h-fit rounded bg-blue-600 text-white text-sm hover:bg-blue-700'>Live Results</Link>}
+          <button onClick={handleLogout} className="px-3 py-1 h-fit rounded bg-red-600 text-white text-sm hover:bg-red-700">Logout</button>
+        </div>
       </div>
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AddCandidateForm eventId={eventId} onCandidateAdded={handleCandidateAdded} />

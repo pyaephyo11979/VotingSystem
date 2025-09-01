@@ -11,11 +11,14 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError("");
     try {
-      const response = await loginUser(username, password);
-      localStorage.setItem("eventId", response.eventId);
-      localStorage.setItem("eventPassword", response.eventPassword);
-      localStorage.setItem("userId", response.userId);
-      navigate("/vote");
+  const data = await loginUser(username, password);
+  localStorage.setItem("eventId", data.eventId);
+  localStorage.setItem("eventPassword", data.eventPassword);
+  localStorage.setItem("userId", data.userId);
+  const eventData = { eventId: data.eventId, eventPassword: data.eventPassword, eventName: data.eventName };
+  try { localStorage.setItem('eventData', JSON.stringify(eventData)); } catch {/* ignore */ }
+  // Small timeout to ensure React effect sees storage (rarely needed but safe)
+  setTimeout(()=>navigate('/vote'), 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid username or password");
     }

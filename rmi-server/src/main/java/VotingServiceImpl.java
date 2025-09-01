@@ -1,7 +1,6 @@
 import org.example.shared.VotingService;
 import org.example.shared.EventInfo;
 import org.example.shared.Candidate;
-import org.example.shared.User;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
@@ -89,12 +88,25 @@ public class VotingServiceImpl extends UnicastRemoteObject implements VotingServ
     @Override
     public List<Candidate> getEventForVoter(String eventId, String password) throws RemoteException {
         String storedPassword = eventPasswords.get(eventId);
+        if (storedPassword == null) {
+            // Lazy load from DB if event created before service restart
+            String dbPassword = dbController.getEventPassword(eventId);
+            if (dbPassword != null) {
+                eventPasswords.put(eventId, dbPassword);
+                events.putIfAbsent(eventId, new ArrayList<>()); // ensure candidates list exists
+                storedPassword = dbPassword;
+            }
+        }
         if (storedPassword != null && storedPassword.equals(password)) {
-            // Get candidates from database
             List<Map<String, String>> candidateData = dbController.getCandidates(eventId);
             List<Candidate> candidates = new ArrayList<>();
             for (Map<String, String> data : candidateData) {
-                candidates.add(new Candidate(data.get("id"), data.get("name"), null)); // Photo not retrieved for voting
+                byte[] photoBytes = null;
+                String b64 = data.get("photoBase64");
+                if (b64 != null) {
+                    try { photoBytes = Base64.getDecoder().decode(b64); } catch (Exception ignored) {}
+                }
+                candidates.add(new Candidate(data.get("id"), data.get("name"), photoBytes));
             }
             return candidates;
         }
@@ -127,7 +139,7 @@ public class VotingServiceImpl extends UnicastRemoteObject implements VotingServ
         List<Map<String, String>> createdAccounts = new ArrayList<>();
         for (int i = 0; i < eventSize; i++) {
             String id = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            String psw = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+            String psw = UUID.randomUUID().toString().substring(0, 8).substring(0, 8);
             String username = UUID.randomUUID().toString().substring(0, 8);
 
             // Register user in database

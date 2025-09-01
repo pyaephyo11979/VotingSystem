@@ -1,26 +1,30 @@
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { useOutletContext } from "react-router-dom";
 import { createEvent } from "@/utils/api";
 import EventCreatedCard from "@/components/ui/event_card";
+import {AppLogo} from "@/components/AppLogo.tsx";
 
 const CreateEventForm = () => {
-  const { setEventData } = useOutletContext();
+  interface EventData { eventId: string; eventName: string; eventPassword: string }
+  const { setEventData } = useOutletContext<{ setEventData: (d: EventData)=>void }>();
   const [eventName, setEventName] = useState("");
-  const [localEventData, setLocalEventData] = useState(null);
+  const [localEventData, setLocalEventData] = useState<EventData|null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
-      const data = await createEvent(eventName);
-      setEventData(data);
-      setLocalEventData(data);
-    } catch (error) {
-      setError(error.message);
+  const data = await createEvent(eventName);
+  setEventData(data);
+  try { localStorage.setItem("eventData", JSON.stringify(data)); } catch { /* ignore */ }
+  setLocalEventData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create event");
     } finally {
       setIsLoading(false);
     }
@@ -34,9 +38,7 @@ const CreateEventForm = () => {
     <div className="flex flex-col items-center justify-center flex-1">
       <form onSubmit={handleSubmit} className="flex flex-col items-center">
         {/* Logo */}
-        <div className="w-40 h-40 bg-gray-300 flex items-center justify-center text-xl font-medium text-black mb-6">
-          Logo
-        </div>
+          <AppLogo />
         {/* Input + Button */}
         <div className="flex space-x-2">
           <input
