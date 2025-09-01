@@ -5,13 +5,50 @@ interface EventInfoProps { event: { eventId: string; eventPassword: string; even
 
 export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleCopy = () => {
+  const copyWithFallback = (text: string) => {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed"; // avoid scroll jump
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const success = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return success;
+    } catch (_err) {
+      return false;
+    }
+  };
+
+  const handleCopy = async () => {
     const credentials = `Event ID: ${event.eventId}\nPassword: ${event.eventPassword}`;
-    navigator.clipboard.writeText(credentials);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopyError(null);
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(credentials);
+        setCopied(true);
+      } else {
+        const ok = copyWithFallback(credentials);
+        if (ok) {
+          setCopied(true);
+        } else {
+          throw new Error("Clipboard API not available");
+        }
+      }
+    } catch (err) {
+      console.warn("Copy failed", err);
+      setCopyError("Could not copy. Please copy manually.");
+    } finally {
+      setTimeout(() => {
+        setCopied(false);
+        setCopyError(null);
+      }, 2500);
+    }
   };
 
   return (
@@ -43,6 +80,9 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
         <p className="text-sm text-gray-500 mb-4">
           Copy the credentials to access admin portal
         </p>
+        {copyError && (
+          <p className="text-xs text-red-600 mb-2" role="alert">{copyError}</p>
+        )}
 
         {/* Event ID */}
         <div className="mb-3 flex items-center gap-x-2">
@@ -74,7 +114,8 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
         <div className="space-y-2">
           <button
             onClick={handleCopy}
-            className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800"
+            className="w-full bg-gray-900 text-white py-2 rounded-md hover:bg-gray-800 disabled:opacity-60"
+            disabled={copied}
           >
             {copied ? "Copied!" : "Copy"}
           </button>

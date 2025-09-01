@@ -12,6 +12,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
+import java.lang.String.*;
 
 public class DBController {
     private final String url = "jdbc:mysql://localhost:3306/votingdb";
@@ -159,18 +160,70 @@ public class DBController {
         }
     }
 
-    public boolean addCandidate(String eventId, String candidateName, byte[] photo) {
+    public String addCandidate(String eventId, String candidateName, byte[] photo) {
         // Expect table 'candidates.photo' to be a (LONG)BLOB to store raw bytes.
         String query = "INSERT INTO candidates (event_id, name, photo) VALUES (?, ?, ?)";
         try (Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(query)) {
+                PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, eventId);
             stmt.setString(2, candidateName);
             stmt.setBytes(3, photo);
             int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
+            if (rowsAffected > 0) {
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return String.valueOf(rs.getInt(1));
+                    }
+                }
+            }
+            return null;
         } catch (SQLException e) {
             System.err.println("❌ Database error in addCandidate: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean updateCandidate(String eventId, String candidateId, String newName, byte[] newPhoto) {
+        // Build dynamic SQL depending on provided fields
+        StringBuilder sb = new StringBuilder("UPDATE candidates SET ");
+        List<Object> params = new ArrayList<>();
+        if (newName != null && !newName.isBlank()) {
+            sb.append("name = ?");
+            params.add(newName);
+        }
+        if (newPhoto != null) {
+            if (!params.isEmpty()) sb.append(", ");
+            sb.append("photo = ?");
+            params.add(newPhoto);
+        }
+        if (params.isEmpty()) return false; // nothing to update
+        sb.append(" WHERE id = ? AND event_id = ?");
+        params.add(Integer.parseInt(candidateId));
+        params.add(eventId);
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sb.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object p = params.get(i);
+                if (p instanceof byte[]) stmt.setBytes(i + 1, (byte[]) p);
+                else if (p instanceof Integer) stmt.setInt(i + 1, (Integer) p);
+                else stmt.setString(i + 1, String.valueOf(p));
+            }
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("❌ Database error in updateCandidate: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteCandidate(String eventId, String candidateId) {
+        String query = "DELETE FROM candidates WHERE id = ? AND event_id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, Integer.parseInt(candidateId));
+            stmt.setString(2, eventId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("❌ Database error in deleteCandidate: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

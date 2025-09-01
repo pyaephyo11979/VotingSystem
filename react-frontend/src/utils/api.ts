@@ -59,6 +59,21 @@ export const getCandidates = (eventId: string, password?: string) => {
   return request<{eventId:string; totalCandidates:number; candidates:CandidateDto[]}>(url);
 };
 
+export const updateCandidate = (eventId: string, candidateId: string, name?: string, photo?: File|null) => {
+  const formData = new FormData();
+  if (name) formData.append("name", name);
+  if (photo) formData.append("photo", photo);
+  return request<{candidateId:string; eventId:string; updated:boolean}>(`${base_url}/${eventId}/candidates/${candidateId}`, {
+    method: "PUT",
+    body: formData
+  });
+};
+
+export const deleteCandidate = (eventId: string, candidateId: string) => request<{candidateId:string; eventId:string; deleted:boolean}>(
+  `${base_url}/${eventId}/candidates/${candidateId}`,
+  { method: "DELETE" }
+);
+
 // Accounts
 export const createAccounts = (eventId: string, eventSize: number) => request<{eventId:string; accountsCreated:number; accounts:AccountDto[]}>(
   `${base_url}/${eventId}/accounts`,

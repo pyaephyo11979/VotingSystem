@@ -9,7 +9,14 @@ public interface VotingService extends Remote {
     // Admin methods
     EventInfo createEvent(String eventName) throws RemoteException;
 
-    void addCandidate(String eventId, String candidateName, byte[] photo) throws RemoteException;
+    // Returns the created candidate's ID (DB generated)
+    String addCandidate(String eventId, String candidateName, byte[] photo) throws RemoteException;
+
+    // Update candidate (name and/or photo). If newName is null/blank keep existing. If photo null keep existing.
+    boolean updateCandidate(String eventId, String candidateId, String newName, byte[] newPhoto) throws RemoteException;
+
+    // Delete candidate by id within event
+    boolean deleteCandidate(String eventId, String candidateId) throws RemoteException;
 
     Map<String, Integer> getResults(String eventId) throws RemoteException;
 

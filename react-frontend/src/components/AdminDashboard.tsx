@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import VoteStatusChecker from "@/components/ui/VoteStatusChecker";
 
 interface EventData { eventId: string; eventName?: string; eventPassword?: string; }
-interface Candidate { id: string; name: string; photo?: string | null; }
+interface Candidate { id?: string; candidateId?: string; name?: string; photo?: string | null; image?: string }
 interface OutletCtx { eventData: EventData | null; setEventData: (v: EventData|null)=>void }
 
 const AdminDashboard = () => {
@@ -30,7 +30,7 @@ const AdminDashboard = () => {
       setError("");
       try {
   const data = await getCandidates(eventId as string, password);
-        setCandidates(data.candidates);
+        setCandidates(data.candidates as unknown as Candidate[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -89,7 +89,11 @@ const AdminDashboard = () => {
         <div>
           {isLoading && <p>Loading candidates...</p>}
           {error && <p className="text-red-500">{error}</p>}
-          {!isLoading && !error && <CandidateList candidates={candidates} />}
+          {!isLoading && !error && <CandidateList 
+            candidates={candidates} 
+            onUpdated={(id, partial)=>setCandidates(prev=>prev.map(c=> (c.id===id? {...c, ...partial}: c)))}
+            onDeleted={(id)=>setCandidates(prev=>prev.filter(c=>c.id!==id))}
+          />}
         </div>
         <AccountsSection eventId={eventId} />
         <ResultsSection eventId={eventId} />

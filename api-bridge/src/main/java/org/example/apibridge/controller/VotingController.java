@@ -46,13 +46,46 @@ public class VotingController {
             throw new IllegalArgumentException("Candidate name required");
         }
         byte[] photoBytes = (photo != null && !photo.isEmpty()) ? photo.getBytes() : null;
-    votingService.addCandidate(eventId, name, photoBytes);
-    Map<String,Object> payload = new HashMap<>();
-    payload.put("candidateId", name); // no ID returned by current RMI API; using name as placeholder
-    payload.put("eventId", eventId);
-    payload.put("name", name);
-    payload.put("hasPhoto", photoBytes != null);
-    return ResponseEntity.ok(StandardResponse.ok(payload));
+        String candidateId = votingService.addCandidate(eventId, name, photoBytes);
+        Map<String,Object> payload = new HashMap<>();
+        payload.put("candidateId", candidateId);
+        payload.put("eventId", eventId);
+        payload.put("name", name);
+        payload.put("hasPhoto", photoBytes != null);
+        return ResponseEntity.ok(StandardResponse.ok(payload));
+    }
+
+    @PutMapping("/{eventId}/candidates/{candidateId}")
+    public ResponseEntity<StandardResponse<Map<String,Object>>> updateCandidate(
+            @PathVariable String eventId,
+            @PathVariable String candidateId,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) throws IOException, RemoteException {
+        byte[] photoBytes = (photo != null && !photo.isEmpty()) ? photo.getBytes() : null;
+        boolean updated = votingService.updateCandidate(eventId, candidateId, name, photoBytes);
+        if (!updated) {
+            return ResponseEntity.status(404).body(StandardResponse.fail("NOT_FOUND","Candidate not found or nothing to update"));
+        }
+        Map<String,Object> payload = new HashMap<>();
+        payload.put("candidateId", candidateId);
+        payload.put("eventId", eventId);
+        payload.put("updated", true);
+        return ResponseEntity.ok(StandardResponse.ok(payload));
+    }
+
+    @DeleteMapping("/{eventId}/candidates/{candidateId}")
+    public ResponseEntity<StandardResponse<Map<String,Object>>> deleteCandidate(
+            @PathVariable String eventId,
+            @PathVariable String candidateId) throws RemoteException {
+        boolean deleted = votingService.deleteCandidate(eventId, candidateId);
+        if (!deleted) {
+            return ResponseEntity.status(404).body(StandardResponse.fail("NOT_FOUND","Candidate not found"));
+        }
+        Map<String,Object> payload = new HashMap<>();
+        payload.put("candidateId", candidateId);
+        payload.put("eventId", eventId);
+        payload.put("deleted", true);
+        return ResponseEntity.ok(StandardResponse.ok(payload));
     }
 
     @PostMapping("/{eventId}/vote")

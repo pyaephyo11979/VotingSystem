@@ -35,21 +35,63 @@ public class VotingServiceImpl extends UnicastRemoteObject implements VotingServ
     }
 
     @Override
-    public void addCandidate(String eventId, String candidateName, byte[] photo) throws RemoteException {
+    public String addCandidate(String eventId, String candidateName, byte[] photo) throws RemoteException {
         if (!events.containsKey(eventId)) {
             System.err.println("❌ RMI: Attempted to add candidate to non-existent event: " + eventId);
-            return;
+            return null;
         }
 
         // Store in database
-        boolean added = dbController.addCandidate(eventId, candidateName, photo);
-        if (added) {
-            Candidate newCandidate = new Candidate(UUID.randomUUID().toString(), candidateName, photo);
+        String candidateId = dbController.addCandidate(eventId, candidateName, photo);
+        if (candidateId != null) {
+            Candidate newCandidate = new Candidate(candidateId, candidateName, photo);
             events.get(eventId).add(newCandidate);
-            System.out.println("✅ RMI: Candidate '" + candidateName + "' added to event " + eventId);
+            System.out.println("✅ RMI: Candidate '" + candidateName + "' added to event " + eventId + " ID=" + candidateId);
+            return candidateId;
         } else {
             System.err.println("❌ RMI: Failed to add candidate to database: " + candidateName);
             throw new RemoteException("Failed to add candidate to database");
+        }
+    }
+
+    @Override
+    public boolean updateCandidate(String eventId, String candidateId, String newName, byte[] newPhoto) throws RemoteException {
+        try {
+            boolean updated = dbController.updateCandidate(eventId, candidateId, newName, newPhoto);
+            if (updated) {
+                // Update in-memory cache if present
+                List<Candidate> list = events.get(eventId);
+                if (list != null) {
+                    for (Candidate c : list) {
+                        if (c.getId().equals(candidateId)) {
+                            if (newName != null && !newName.isBlank()) c.setName(newName);
+                            if (newPhoto != null && newPhoto.length > 0) c.setPhoto(newPhoto);
+                            break;
+                        }
+                    }
+                }
+            }
+            return updated;
+        } catch (Exception e) {
+            System.err.println("❌ RMI: Failed to update candidate " + candidateId + " in event " + eventId);
+            throw new RemoteException("Failed to update candidate", e);
+        }
+    }
+
+    @Override
+    public boolean deleteCandidate(String eventId, String candidateId) throws RemoteException {
+        try {
+            boolean deleted = dbController.deleteCandidate(eventId, candidateId);
+            if (deleted) {
+                List<Candidate> list = events.get(eventId);
+                if (list != null) {
+                    list.removeIf(c -> c.getId().equals(candidateId));
+                }
+            }
+            return deleted;
+        } catch (Exception e) {
+            System.err.println("❌ RMI: Failed to delete candidate " + candidateId + " in event " + eventId);
+            throw new RemoteException("Failed to delete candidate", e);
         }
     }
 
