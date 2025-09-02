@@ -15,6 +15,37 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timeouts = useRef<Record<string, number>>({});
 
+  // Polyfill for crypto.randomUUID (older browsers / non-secure contexts)
+  const safeRandomUUID = useCallback((): string => {
+    const g = (typeof globalThis !== 'undefined' ? globalThis : {}) as typeof globalThis & { crypto?: Crypto };
+    if (g.crypto && 'randomUUID' in g.crypto && typeof (g.crypto as { randomUUID?: () => string }).randomUUID === 'function') {
+      return g.crypto.randomUUID!();
+    }
+    // Fallback using crypto.getRandomValues if available
+    const getValues = (size: number) => {
+      if (g.crypto && typeof g.crypto.getRandomValues === 'function') {
+        return g.crypto.getRandomValues(new Uint8Array(size));
+      }
+      // Final fallback (not cryptographically strong)
+      const arr = new Uint8Array(size);
+      for (let i = 0; i < size; i++) arr[i] = Math.floor(Math.random() * 256);
+      return arr;
+    };
+    const bytes = getValues(16);
+    // RFC4122 version 4 formatting
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const toHex: string[] = [];
+    for (let i = 0; i < 256; i++) toHex.push((i + 0x100).toString(16).substring(1));
+    return (
+      toHex[bytes[0]] + toHex[bytes[1]] + toHex[bytes[2]] + toHex[bytes[3]] + '-' +
+      toHex[bytes[4]] + toHex[bytes[5]] + '-' +
+      toHex[bytes[6]] + toHex[bytes[7]] + '-' +
+      toHex[bytes[8]] + toHex[bytes[9]] + '-' +
+      toHex[bytes[10]] + toHex[bytes[11]] + toHex[bytes[12]] + toHex[bytes[13]] + toHex[bytes[14]] + toHex[bytes[15]]
+    );
+  }, []);
+
   const dismiss = useCallback((id: string) => {
     setToasts(t => t.filter(to => to.id !== id));
     const handle = timeouts.current[id];
@@ -23,14 +54,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const show = useCallback((message: string, opts: Partial<Omit<Toast,'id'|'message'>> = {}) => {
-    const id = crypto.randomUUID();
+    const id = safeRandomUUID();
     const toast: Toast = { id, message, type: opts.type || 'info', duration: opts.duration ?? 3500 };
     setToasts(t => [...t, toast]);
     if (toast.duration! > 0) {
       const handle = window.setTimeout(() => dismiss(id), toast.duration);
       timeouts.current[id] = handle;
     }
-  }, [dismiss]);
+  }, [dismiss, safeRandomUUID]);
 
   useEffect(() => () => { // cleanup on unmount
     Object.values(timeouts.current).forEach(h => window.clearTimeout(h));

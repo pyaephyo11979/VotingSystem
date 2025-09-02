@@ -22,7 +22,7 @@ public interface VotingService extends Remote {
 
     List<Map<String, String>> createAccounts(String eventId, int eventSize) throws RemoteException;
 
-    Map<Integer, String> getUserAccounts(String eventID) throws RemoteException;
+    List<Map<String, String>> getUserAccounts(String eventID) throws RemoteException;
 
     // Voter methods
     Map<String, String> Login(String username, String password) throws RemoteException;

@@ -1,8 +1,28 @@
-# Voting System API Documentation (Updated)
+# Voting System API Documentation
 
 ## Overview
 
-The Voting System API provides RESTful endpoints for managing voting events, candidates, user accounts, and vote casting. All endpoints now return consistent JSON responses.
+This API manages voting events, candidates, voter accounts and ballots. All successful responses follow a unified envelope:
+
+```
+{
+  "success": true,
+  "data": { /* endpoint-specific payload */ },
+  "error": null
+}
+```
+
+Failed responses look like:
+
+```
+{
+  "success": false,
+  "data": null,
+  "error": { "code": "ERROR_CODE", "message": "Human readable message" }
+}
+```
+
+Codes observed: `BAD_REQUEST`, `REMOTE_ERROR`, `VALIDATION_ERROR`, `INTERNAL_ERROR`, `NOT_FOUND`, `EVENT_OR_PASSWORD_INVALID`, `UNAUTHORIZED`, `ALREADY_VOTED`.
 
 ## Base URL
 
@@ -10,13 +30,320 @@ The Voting System API provides RESTful endpoints for managing voting events, can
 http://localhost:8080/api/events
 ```
 
-## Response Format
+All paths below are relative to the base URL.
 
-All responses are in JSON format with consistent structure including:
+---
 
-- `message`: Descriptive message about the operation
-- `eventId`: Event identifier (where applicable)
-- Additional data fields specific to each endpoint
+## Standard Payload Fields
+
+Depending on endpoint payloads commonly include:
+
+- `eventId`: Event identifier
+- `candidateId`: Candidate identifier (DB generated)
+- `userId`, `username`, `password`: Voter account credentials
+- `accounts`: Array of account objects (always array in current implementation)
+- `candidates`: Array of candidate objects `{ id, name, photo? }` (voter-facing) or normalized objects in client
+- `results`: Object mapping candidateId (or name) to vote counts
+- `hasVoted`: Boolean vote status
+
+---
+
+## Admin / Management Endpoints
+
+### 1. Create Event
+
+POST `/create`
+
+Request Body:
+```json
+{ "eventName": "Student Council Election" }
+```
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "eventId": "ABC12345",
+    "eventName": "Student Council Election",
+    "eventPassword": "xyz789"
+  },
+  "error": null
+}
+```
+
+Errors: `BAD_REQUEST` if `eventName` missing.
+
+---
+
+### 2. Add Candidate
+
+POST `/{eventId}/candidates` (multipart/form-data)
+
+Form Fields:
+- `name` (required)
+- `photo` (optional binary)
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "candidateId": "CAND123",
+    "eventId": "ABC12345",
+    "name": "John Doe",
+    "hasPhoto": true
+  },
+  "error": null
+}
+```
+
+Errors: `BAD_REQUEST` if name blank, `NOT_FOUND` if event invalid (from underlying service), other remote errors as `REMOTE_ERROR`.
+
+---
+
+### 3. Update Candidate
+
+PUT `/{eventId}/candidates/{candidateId}` (multipart/form-data)
+
+Optional form fields: `name`, `photo` (supply only what you change)
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "candidateId": "CAND123",
+    "eventId": "ABC12345",
+    "updated": true
+  },
+  "error": null
+}
+```
+
+Errors: `NOT_FOUND` if candidate doesn’t exist or nothing changed.
+
+---
+
+### 4. Delete Candidate
+
+DELETE `/{eventId}/candidates/{candidateId}`
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": { "candidateId": "CAND123", "eventId": "ABC12345", "deleted": true },
+  "error": null
+}
+```
+
+Errors: `NOT_FOUND` if candidate missing.
+
+---
+
+### 5. Create User Accounts
+
+POST `/{eventId}/accounts`
+
+Body:
+```json
+{ "eventSize": 3 }
+```
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "eventId": "ABC12345",
+    "accountsCreated": 3,
+    "accounts": [
+      { "username": "user001", "userId": "USER001", "password": "PASS123", "eventId": "ABC12345" },
+      { "username": "user002", "userId": "USER002", "password": "PASS456", "eventId": "ABC12345" },
+      { "username": "user003", "userId": "USER003", "password": "PASS789", "eventId": "ABC12345" }
+    ]
+  },
+  "error": null
+}
+```
+
+Errors: `BAD_REQUEST` if `eventSize < 1`.
+
+---
+
+### 6. Get User Accounts
+
+GET `/{eventId}/accounts`
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "eventId": "ABC12345",
+    "totalAccounts": 3,
+    "accounts": [
+      { "username": "user001", "userId": "USER001", "password": "PASS123", "eventId": "ABC12345" },
+      { "username": "user002", "userId": "USER002", "password": "PASS456", "eventId": "ABC12345" },
+      { "username": "user003", "userId": "USER003", "password": "PASS789", "eventId": "ABC12345" }
+    ]
+  },
+  "error": null
+}
+```
+
+Note: Backend already returns an array (not object map) for `accounts`.
+
+---
+
+## Voting / Voter Endpoints
+
+### 7. Login
+
+POST `/login`
+
+Body:
+```json
+{ "username": "user001", "password": "PASS123" }
+```
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "USER001",
+    "eventId": "ABC12345",
+    "eventName": "Student Council Election",
+    "eventPassword": "xyz789"
+  },
+  "error": null
+}
+```
+
+Errors: `UNAUTHORIZED` invalid credentials.
+
+---
+
+### 8. Get Candidates (Voter)
+
+GET `/{eventId}/candidates?password={eventPassword}`
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "eventId": "ABC12345",
+    "totalCandidates": 2,
+    "candidates": [
+      { "id": "cand001", "name": "Alice", "photo": "data:image/jpeg;base64,..." },
+      { "id": "cand002", "name": "Bob" }
+    ]
+  },
+  "error": null
+}
+```
+
+Errors: `EVENT_OR_PASSWORD_INVALID` (404) if event or password incorrect.
+
+---
+
+### 9. Cast Vote
+
+POST `/{eventId}/vote`
+
+Body:
+```json
+{ "userId": "USER001", "candidateId": "cand001" }
+```
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": { "eventId": "ABC12345", "candidateId": "cand001", "userId": "USER001", "success": true },
+  "error": null
+}
+```
+
+Errors: `ALREADY_VOTED` (409) if duplicate vote.
+
+---
+
+### 10. Vote Status
+
+GET `/{eventId}/vote-status/{userId}`
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": { "eventId": "ABC12345", "userId": "USER001", "hasVoted": true },
+  "error": null
+}
+```
+
+---
+
+### 11. Get Results
+
+GET `/{eventId}/results`
+
+Success (200):
+```json
+{
+  "success": true,
+  "data": {
+    "eventId": "ABC12345",
+    "totalVotes": 42,
+    "results": { "cand001": 20, "cand002": 22 }
+  },
+  "error": null
+}
+```
+
+---
+
+## Error Handling Summary
+
+| HTTP | code | Meaning |
+|------|------|---------|
+| 400 | BAD_REQUEST | Missing/invalid input |
+| 401 | UNAUTHORIZED | Login failed |
+| 404 | NOT_FOUND | Resource absent |
+| 404 | EVENT_OR_PASSWORD_INVALID | Event or password invalid |
+| 409 | ALREADY_VOTED | Duplicate ballot |
+| 500 | REMOTE_ERROR / INTERNAL_ERROR | Backend or unexpected error |
+
+All errors share structure:
+```json
+{ "success": false, "data": null, "error": { "code": "...", "message": "..." } }
+```
+
+---
+
+## Versioning & CORS
+
+- Current API unversioned under `/api/events`.
+- CORS allowed origins configured via `app.cors.allowed-origins` property.
+
+---
+
+## Future Improvements (Suggested)
+
+- Add pagination to accounts & candidates.
+- Provide HEAD / health endpoint.
+- Add rate limiting headers.
+- Include ETag/Last-Modified for candidates & results.
+
+---
+
+## Changelog
+
+- 2025-09-02: Documentation synchronized with backend controller implementation (`VotingController`).
+
 
 ---
 

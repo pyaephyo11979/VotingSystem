@@ -12,21 +12,30 @@ interface CandidateDto { id?: string; candidateId?: string; name?: string; candi
 interface AccountDto { username: string; userId: string; password: string; eventId: string }
 
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
-  const res = await fetch(input, init);
+  let res: Response;
+  try {
+    res = await fetch(input, init);
+  } catch (networkErr) {
+    // Browser fetch network failure (CORS, DNS, connection refused, mixed content, etc.)
+    console.error('[API] Network error', { input, init, error: networkErr });
+    throw new Error('Network error: failed to reach server');
+  }
   let json: StandardResponse<T>;
   try {
     json = await res.json();
-  } catch {
-    throw new Error("Invalid server response");
+  } catch (parseErr) {
+    console.error('[API] Parse error', { input, status: res.status, parseErr });
+    throw new Error('Invalid server response');
   }
   if (!res.ok || !json.success) {
-  let msg = json?.error?.message || (json as unknown as { message?: string })?.message || res.statusText;
+    let msg = json?.error?.message || (json as unknown as { message?: string })?.message || res.statusText;
     if (res.status === 404 && json?.error?.code === 'EVENT_OR_PASSWORD_INVALID') {
       msg = 'Event not found or password incorrect';
     }
     if (res.status === 409 && json?.error?.code === 'ALREADY_VOTED') {
       msg = 'You have already voted in this event';
     }
+    console.warn('[API] Error response', { input, status: res.status, body: json });
     throw new Error(msg);
   }
   return json.data as T;
@@ -44,6 +53,7 @@ export const createEvent = (eventName: string) => request<{eventId:string; event
 
 // Candidates
 export const addCandidates = (eventId: string, name: string, photo?: File|null) => {
+  if (!eventId) return Promise.reject(new Error('Missing eventId'));
   const formData = new FormData();
   formData.append("name", name);
   if (photo) formData.append("photo", photo);
@@ -60,6 +70,8 @@ export const getCandidates = (eventId: string, password?: string) => {
 };
 
 export const updateCandidate = (eventId: string, candidateId: string, name?: string, photo?: File|null) => {
+  if (!eventId) return Promise.reject(new Error('Missing eventId'));
+  if (!candidateId) return Promise.reject(new Error('Missing candidateId'));
   const formData = new FormData();
   if (name) formData.append("name", name);
   if (photo) formData.append("photo", photo);
@@ -69,10 +81,14 @@ export const updateCandidate = (eventId: string, candidateId: string, name?: str
   });
 };
 
-export const deleteCandidate = (eventId: string, candidateId: string) => request<{candidateId:string; eventId:string; deleted:boolean}>(
-  `${base_url}/${eventId}/candidates/${candidateId}`,
-  { method: "DELETE" }
-);
+export const deleteCandidate = (eventId: string, candidateId: string) => {
+  if (!eventId) return Promise.reject(new Error('Missing eventId'));
+  if (!candidateId) return Promise.reject(new Error('Missing candidateId'));
+  return request<{candidateId:string; eventId:string; deleted:boolean}>(
+    `${base_url}/${eventId}/candidates/${candidateId}`,
+    { method: "DELETE" }
+  );
+};
 
 // Accounts
 export const createAccounts = (eventId: string, eventSize: number) => request<{eventId:string; accountsCreated:number; accounts:AccountDto[]}>(

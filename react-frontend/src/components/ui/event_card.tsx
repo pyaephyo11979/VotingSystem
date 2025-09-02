@@ -6,6 +6,7 @@ interface EventInfoProps { event: { eventId: string; eventPassword: string; even
 export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const copyWithFallback = (text: string) => {
@@ -20,7 +21,7 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
       const success = document.execCommand("copy");
       document.body.removeChild(textarea);
       return success;
-    } catch (_err) {
+  } catch {
       return false;
     }
   };
@@ -102,12 +103,23 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
           <label className="w-24 text-sm font-medium text-gray-700">
             Password
           </label>
-          <input
-            type="text"
-            value={event.eventPassword}
-            readOnly
-            className="flex-1 px-3 py-2 border rounded-md bg-gray-50 text-gray-900 focus:outline-none"
-          />
+          <div className="flex-1 relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={event.eventPassword}
+              readOnly
+              className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-900 focus:outline-none pr-14"
+              aria-label="Event password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(p => !p)}
+              className="absolute inset-y-0 right-2 flex items-center text-xs font-medium text-gray-600 hover:text-gray-800"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
 
         {/* Action Buttons */}

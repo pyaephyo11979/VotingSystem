@@ -11,6 +11,7 @@ const AccessEventForm = () => {
   const [eventId, setEventId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { show } = useToast();
 
@@ -32,6 +33,7 @@ const AccessEventForm = () => {
       setEventData(eventData);
       localStorage.setItem("eventData", JSON.stringify(eventData));
       show("Event accessed", { type: 'success' });
+      localStorage.setItem("eventId", eventId);
       navigate(`/admin/${eventId}`);
     } catch (e) {
       setError("Invalid Event ID or Password");
@@ -55,14 +57,25 @@ const AccessEventForm = () => {
               onChange={(e) => setEventId(e.target.value)}
               className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="submit" className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" disabled={isLoading}>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="px-4 py-2 pr-16 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                aria-label="Event password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p=>!p)}
+                className="absolute inset-y-0 right-3 flex items-center text-xs font-medium text-gray-600 hover:text-gray-800"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+            <button type="submit" className="bg-gray-900 mt-4 text-white px-4 py-2 rounded hover:bg-gray-700" disabled={isLoading}>
               {isLoading ? "Accessing..." : "Access Event"}
             </button>
           </div>

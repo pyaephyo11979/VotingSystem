@@ -21,7 +21,7 @@ const CreateEventForm = () => {
     try {
   const data = await createEvent(eventName);
   setEventData(data);
-  try { localStorage.setItem("eventData", JSON.stringify(data)); } catch { /* ignore */ }
+  try { localStorage.setItem("eventData", JSON.stringify(data)); localStorage.setItem("eventId",JSON.stringify(data.eventId)); } catch { /* ignore */ }
   setLocalEventData(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create event");

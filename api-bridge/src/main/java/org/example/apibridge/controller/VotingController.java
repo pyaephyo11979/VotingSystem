@@ -133,7 +133,7 @@ public class VotingController {
 
     @GetMapping("/{eventId}/accounts")
     public ResponseEntity<StandardResponse<Map<String,Object>>> getUserAccounts(@PathVariable String eventId) throws RemoteException {
-        Map<Integer,String> accounts = votingService.getUserAccounts(eventId);
+        List<Map<String,String>> accounts = votingService.getUserAccounts(eventId);
         Map<String,Object> data = new HashMap<>();
         data.put("eventId", eventId);
         data.put("totalAccounts", accounts.size());

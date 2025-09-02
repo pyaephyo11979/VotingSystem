@@ -10,6 +10,7 @@ export function LoginCard() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -47,7 +48,25 @@ export function LoginCard() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} required className="outline-none focus-visible:ring-0" />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e=>setPassword(e.target.value)}
+                  required
+                  className="outline-none focus-visible:ring-0 pr-14"
+                  aria-label="Password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p=>!p)}
+                  className="absolute inset-y-0 right-2 text-xs font-medium text-gray-600 hover:text-gray-800"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>{loading?"Logging in...":"Login"}</Button>

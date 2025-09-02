@@ -35,7 +35,29 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
     setLoading(true); setError("");
     try {
       const data = await getAccounts(eventId);
-      setAccountsData(data);
+      // Normalize to array shape like createAccounts
+      let normalized: AccountsArrayData | AccountsObjectData;
+      const isArrayForm = (d: AccountsObjectData | AccountsArrayData): d is AccountsArrayData => Array.isArray((d as AccountsArrayData).accounts);
+      if (isArrayForm(data)) {
+        normalized = data; // already array form
+      } else {
+        const record = (data as AccountsObjectData).accounts;
+        const parseLine = (key: string, val: string) => {
+          const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
+          if (r1) return { userId: r1[1], password: r1[2], username: '' };
+          const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
+          if (r2) return { userId: r2[1], password: r2[2], username: '' };
+            const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val);
+          if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
+          return { userId: key, username: val, password: '' };
+        };
+        const accounts: AccountRecord[] = Object.entries(record).map(([k,v])=>{
+          const { userId, username, password } = parseLine(k, v);
+          return { userId, username, password, eventId };
+        });
+        normalized = { eventId, accounts } as AccountsArrayData;
+      }
+      setAccountsData(normalized);
       show('Accounts refreshed', { type: 'info' });
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setLoading(false); }
   };
@@ -43,22 +65,67 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
   const rows = useMemo(() => {
     if (!accountsData) return [] as AccountRecord[];
     if (Array.isArray(accountsData.accounts)) {
-      // array form (newly created accounts) we keep username & userId only
-      return accountsData.accounts.map(a => ({ username: a.username, userId: a.userId, eventId: a.eventId }));
+      // array form (newly created accounts)
+      return accountsData.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
     }
-    // object form: keep raw lines; we won't parse password, just show entire string
-    return Object.values(accountsData.accounts).map(line => ({ username: line, userId: '', eventId }));
+    // object form: attempt to parse password from value lines.
+    const parseLine = (key: string, val: string) => {
+      // Patterns we try: 'ID: USER001 | Password: PASS123', 'UserID: USER001 Password: PASS123', 'USER001:username:PASSWORD'
+      const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
+      if (r1) return { userId: r1[1], password: r1[2], username: '' };
+      const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
+      if (r2) return { userId: r2[1], password: r2[2], username: '' };
+      const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val); // generic split
+      if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
+      // Fallback: key might be userId, value username
+      return { userId: key, username: val, password: '' };
+    };
+    return Object.entries(accountsData.accounts).map(([k, v]) => {
+      const { userId, username, password } = parseLine(k, v);
+      return { userId, username, password, eventId } as AccountRecord;
+    });
   }, [accountsData, eventId]);
 
   const filtered = rows.filter(r => !filter || r.userId.toLowerCase().includes(filter.toLowerCase()) || r.username.toLowerCase().includes(filter.toLowerCase()));
 
+  const copyWithFallback = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const copyText = async (text: string, successMsg: string) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        show(successMsg, { type: 'success' });
+      } else {
+        const ok = copyWithFallback(text);
+        if (ok) show(successMsg, { type: 'success' }); else throw new Error('Clipboard unavailable');
+      }
+    } catch {
+      show('Copy failed', { type: 'error' });
+    }
+  };
+
   const copyRow = (r: AccountRecord) => {
-    const text = r.username && !r.userId ? r.username : `${r.userId}\t${r.username}`;
-    navigator.clipboard.writeText(text).then(()=>show('Copied', { type: 'success' })).catch(()=>show('Copy failed', { type: 'error' }));
+    const text = `UserID: ${r.userId}\tUsername: ${r.username}\tPassword: ${r.password ?? ''}\tEventID: ${r.eventId}`;
+    copyText(text, 'Copied');
   };
   const copyAll = () => {
-    const text = rows.map(r => (r.username && !r.userId) ? r.username : `${r.userId}\t${r.username}`).join('\n');
-    navigator.clipboard.writeText(text).then(()=>show('Copied all', { type: 'success' })).catch(()=>show('Copy failed', { type: 'error' }));
+    const text = rows.map(r => `UserID: ${r.userId}\tUsername: ${r.username}\tPassword: ${r.password ?? ''}\tEventID: ${r.eventId}`).join('\n');
+    copyText(text, 'Copied all');
   };
 
   const skeleton = Array.from({ length: 4 }).map((_,i)=>(
@@ -85,7 +152,7 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
         </label>
         <button disabled={loading} className="bg-gray-900 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 disabled:opacity-50">{loading?"Processing...":"Create"}</button>
         <button type="button" onClick={handleRefresh} disabled={loading} className="bg-gray-200 px-4 py-2 rounded text-sm hover:bg-gray-300 disabled:opacity-50">Refresh</button>
-        <div className="ml-auto flex items-center gap-2">
+        <div className=" flex items-center gap-2">
           <input type="text" placeholder="Search user..." value={filter} onChange={e=>setFilter(e.target.value)} className="px-2 py-1 text-sm border rounded w-40" />
           {accountsData && <button type="button" onClick={copyAll} className="text-xs px-2 py-1 rounded border bg-gray-50 hover:bg-gray-100">Copy All</button>}
         </div>
@@ -125,6 +192,7 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
                   <tr key={idx} className="odd:bg-white even:bg-gray-100">
                     <td className="p-1 break-all">{acc.username || <span className="text-gray-400">(auto)</span>}</td>
                     <td className="p-1 font-mono">{acc.userId || <span className="text-gray-400">(n/a)</span>}</td>
+                      <td className='p-1 font-mono'>{acc.password ? acc.password : <span className="text-gray-400">(n/a)</span> }</td>
                     <td className="p-1 space-x-1">
                       <button onClick={()=>copyRow(acc)} className="px-2 py-0.5 bg-blue-600 text-white rounded hover:bg-blue-700">Copy</button>
                     </td>
@@ -147,15 +215,18 @@ const ExportButtons = ({ data }: ExportButtonsProps) => {
     if (Array.isArray(data.accounts)) {
       return data.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
     }
-    // Object style (index -> "ID: USER001 | Password: PASS123")
-    return Object.values(data.accounts).map(line => {
-      const match = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(line);
-      return {
-        username: "",
-        userId: match ? match[1] : line,
-        password: match ? match[2] : "",
-        eventId: data.eventId,
-      };
+    const parseLine = (key: string, val: string) => {
+      const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
+      if (r1) return { userId: r1[1], password: r1[2], username: '' };
+      const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
+      if (r2) return { userId: r2[1], password: r2[2], username: '' };
+      const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val);
+      if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
+      return { userId: key, username: val, password: '' };
+    };
+    return Object.entries(data.accounts).map(([k, v]) => {
+      const { userId, username, password } = parseLine(k, v);
+      return { username, userId, password, eventId: data.eventId };
     });
   };
 
@@ -169,11 +240,12 @@ const ExportButtons = ({ data }: ExportButtonsProps) => {
       mime = 'application/json';
     } else if (format === 'csv') {
       const header = 'username,userId,password,eventId';
-      const csvRows = rows.map(r => [r.username, r.userId, r.password, r.eventId].map(v => `"${(v??'').replace(/"/g,'""')}"`).join(','));
+  const csvRows = rows.map(r => [r.username, r.userId, r.password, r.eventId].map(v => `"${(v??'').replace(/"/g,'""')}"`).join(','));
       content = [header, ...csvRows].join('\n');
       mime = 'text/csv';
     } else {
-      content = rows.map(r => `UserID: ${r.userId}\tPassword: ${r.password}`).join('\n');
+      // TXT: include all fields
+      content = rows.map(r => `UserID: ${r.userId}\tUsername: ${r.username}\tPassword: ${r.password ?? ''}\tEventID: ${r.eventId}`).join('\n');
     }
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -186,9 +258,30 @@ const ExportButtons = ({ data }: ExportButtonsProps) => {
     URL.revokeObjectURL(url);
   };
 
-  const copy = () => {
-    const text = rows.map(r => `${r.userId}\t${r.password}`).join('\n');
-    navigator.clipboard.writeText(text).catch(()=>{});
+  const copyWithFallback = (text: string) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch { return false; }
+  };
+  const copy = async () => {
+    const text = rows.map(r => `UserID: ${r.userId}\tUsername: ${r.username}\tPassword: ${r.password ?? ''}\tEventID: ${r.eventId}`).join('\n');
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ok = copyWithFallback(text);
+        if (!ok) throw new Error('copy failed');
+      }
+    } catch {/* silent */}
   };
 
   return (

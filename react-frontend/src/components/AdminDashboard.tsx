@@ -65,7 +65,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col items-center justify-center flex-1 p-4 w-full">
         <div className="w-full max-w-4xl flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <button onClick={handleLogout} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Logout</button>
+          <button onClick={handleLogout} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Back</button>
         </div>
         <p>Please create or access an event first to access the admin dashboard.</p>
       </div>

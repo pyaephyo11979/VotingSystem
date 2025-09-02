@@ -7,11 +7,11 @@ const HomePage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center flex-1">
-      <div className="mb-4">
+      <div className=" mt-40 mb-4">
         <button
           onClick={() => setShowCreateEvent(true)}
           className={`px-4 py-2 rounded-l-md ${showCreateEvent ? 'bg-gray-900 text-white' : 'bg-gray-300'}`}>
-          Create Event
+            Event Creation
         </button>
         <button
           onClick={() => setShowCreateEvent(false)}

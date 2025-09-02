@@ -204,13 +204,8 @@ public class VotingServiceImpl extends UnicastRemoteObject implements VotingServ
     }
 
     @Override
-    public Map<Integer, String> getUserAccounts(String eventId) throws RemoteException {
-        Map<String, String> userAccounts = dbController.getUserAccounts(eventId);
-        Map<Integer, String> indexedAccounts = new HashMap<>();
-        int index = 0;
-        for (Map.Entry<String, String> entry : userAccounts.entrySet()) {
-            indexedAccounts.put(index++, "Username: " + entry.getKey() + " | Password: " + entry.getValue());
-        }
-        return indexedAccounts;
+    public List<Map<String, String>> getUserAccounts(String eventId) throws RemoteException {
+        List<Map<String, String>> userAccounts = dbController.getUserAccounts(eventId);
+        return userAccounts;
     }
 }

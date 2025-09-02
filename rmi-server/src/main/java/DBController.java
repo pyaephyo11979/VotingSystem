@@ -229,22 +229,26 @@ public class DBController {
         }
     }
 
-    public Map<String, String> getUserAccounts(String eventId) {
+    public List<Map<String, String>> getUserAccounts(String eventId) {
+        List<Map<String, String>> accounts = new ArrayList<>();
         Map<String, String> userAccounts = new HashMap<>();
-        String query = "SELECT username,password FROM users WHERE event_id = ?";
+        String query = "SELECT id,username,password FROM users WHERE event_id = ?";
         try (Connection conn = getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, eventId);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 String psw = decryptPassword(rs.getString("password"));
-                userAccounts.put(rs.getString("username"), psw);
+                userAccounts.put("userId", rs.getString("id"));
+                userAccounts.put("username", rs.getString("username"));
+                userAccounts.put("password", psw);
+                accounts.add(userAccounts);
             }
         } catch (Exception e) {
             System.err.println("❌ Database error in getUserAccounts: " + e.getMessage());
             e.printStackTrace();
         }
-        return userAccounts;
+        return accounts;
     }
 
     public List<Map<String, String>> getCandidates(String eventId) {
