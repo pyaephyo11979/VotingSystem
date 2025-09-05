@@ -3,9 +3,8 @@ import { createAccounts, getAccounts } from "@/utils/api";
 import { useToast } from "@/components/ui/useToast";
 
 interface AccountRecord { username: string; userId: string; password?: string; eventId: string; }
-interface AccountsArrayData { eventId: string; accountsCreated?: number; accounts: AccountRecord[]; }
-interface AccountsObjectData { eventId: string; totalAccounts?: number; accounts: Record<string,string>; }
-type AccountsResponse = AccountsArrayData | AccountsObjectData | null;
+interface AccountsArrayData { eventId: string; accountsCreated?: number; totalAccounts?: number; accounts: AccountRecord[]; }
+type AccountsResponse = AccountsArrayData | null;
 
 interface AccountsSectionProps { eventId: string; }
 
@@ -34,57 +33,16 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
   const handleRefresh = async () => {
     setLoading(true); setError("");
     try {
-      const data = await getAccounts(eventId);
-      // Normalize to array shape like createAccounts
-      let normalized: AccountsArrayData | AccountsObjectData;
-      const isArrayForm = (d: AccountsObjectData | AccountsArrayData): d is AccountsArrayData => Array.isArray((d as AccountsArrayData).accounts);
-      if (isArrayForm(data)) {
-        normalized = data; // already array form
-      } else {
-        const record = (data as AccountsObjectData).accounts;
-        const parseLine = (key: string, val: string) => {
-          const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
-          if (r1) return { userId: r1[1], password: r1[2], username: '' };
-          const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
-          if (r2) return { userId: r2[1], password: r2[2], username: '' };
-            const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val);
-          if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
-          return { userId: key, username: val, password: '' };
-        };
-        const accounts: AccountRecord[] = Object.entries(record).map(([k,v])=>{
-          const { userId, username, password } = parseLine(k, v);
-          return { userId, username, password, eventId };
-        });
-        normalized = { eventId, accounts } as AccountsArrayData;
-      }
-      setAccountsData(normalized);
+  const data = await getAccounts(eventId); // now always normalized to array form
+  setAccountsData({ ...data, accountsCreated: undefined });
       show('Accounts refreshed', { type: 'info' });
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setLoading(false); }
   };
 
   const rows = useMemo(() => {
     if (!accountsData) return [] as AccountRecord[];
-    if (Array.isArray(accountsData.accounts)) {
-      // array form (newly created accounts)
-      return accountsData.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
-    }
-    // object form: attempt to parse password from value lines.
-    const parseLine = (key: string, val: string) => {
-      // Patterns we try: 'ID: USER001 | Password: PASS123', 'UserID: USER001 Password: PASS123', 'USER001:username:PASSWORD'
-      const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
-      if (r1) return { userId: r1[1], password: r1[2], username: '' };
-      const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
-      if (r2) return { userId: r2[1], password: r2[2], username: '' };
-      const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val); // generic split
-      if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
-      // Fallback: key might be userId, value username
-      return { userId: key, username: val, password: '' };
-    };
-    return Object.entries(accountsData.accounts).map(([k, v]) => {
-      const { userId, username, password } = parseLine(k, v);
-      return { userId, username, password, eventId } as AccountRecord;
-    });
-  }, [accountsData, eventId]);
+  return accountsData.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
+  }, [accountsData]);
 
   const filtered = rows.filter(r => !filter || r.userId.toLowerCase().includes(filter.toLowerCase()) || r.username.toLowerCase().includes(filter.toLowerCase()));
 
@@ -141,8 +99,8 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-semibold">Voter Accounts</h2>
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          {accountsData && <span>Total: {Array.isArray(accountsData.accounts) ? accountsData.accounts.length : Object.keys(accountsData.accounts).length}</span>}
-          {('accountsCreated' in (accountsData||{})) && (accountsData as AccountsArrayData).accountsCreated && <span className="text-green-600">+{(accountsData as AccountsArrayData).accountsCreated} new</span>}
+          {accountsData && <span>Total: {accountsData.accounts.length}</span>}
+          {accountsData?.accountsCreated && <span className="text-green-600">+{accountsData.accountsCreated} new</span>}
         </div>
       </div>
       <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
@@ -208,29 +166,10 @@ const AccountsSection = ({ eventId }: AccountsSectionProps) => {
 };
 
 // --- Export Helpers ---
-interface ExportButtonsProps { data: AccountsArrayData | AccountsObjectData }
+interface ExportButtonsProps { data: AccountsArrayData }
 
 const ExportButtons = ({ data }: ExportButtonsProps) => {
-  const buildRows = () => {
-    if (Array.isArray(data.accounts)) {
-      return data.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
-    }
-    const parseLine = (key: string, val: string) => {
-      const r1 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(val);
-      if (r1) return { userId: r1[1], password: r1[2], username: '' };
-      const r2 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(val);
-      if (r2) return { userId: r2[1], password: r2[2], username: '' };
-      const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(val);
-      if (r3) return { userId: r3[1], username: r3[2], password: r3[3] };
-      return { userId: key, username: val, password: '' };
-    };
-    return Object.entries(data.accounts).map(([k, v]) => {
-      const { userId, username, password } = parseLine(k, v);
-      return { username, userId, password, eventId: data.eventId };
-    });
-  };
-
-  const rows = buildRows();
+  const rows = data.accounts.map(a => ({ username: a.username, userId: a.userId, password: a.password, eventId: a.eventId }));
 
   const download = (format: 'csv' | 'json' | 'txt') => {
     let content = "";

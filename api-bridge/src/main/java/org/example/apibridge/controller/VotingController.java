@@ -111,14 +111,15 @@ public class VotingController {
         Map<String,Integer> results = votingService.getResults(eventId);
         Map<String,Object> data = new HashMap<>();
         data.put("eventId", eventId);
-        data.put("totalVotes", results.values().stream().mapToInt(Integer::intValue).sum());
+        int totalVotes = results.values().stream().mapToInt(Integer::intValue).sum();
+        data.put("totalVotes", totalVotes);
         data.put("results", results);
         return ResponseEntity.ok(StandardResponse.ok(data));
     }
 
     @PostMapping("/{eventId}/accounts")
     public ResponseEntity<StandardResponse<Map<String,Object>>> createAccounts(@PathVariable String eventId,
-            @RequestBody Map<String,Integer> payload) throws RemoteException {
+                                                                               @RequestBody Map<String,Integer> payload) throws RemoteException {
         Integer size = payload != null ? payload.get("eventSize") : null;
         if (size == null || size < 1) {
             throw new IllegalArgumentException("eventSize must be positive");

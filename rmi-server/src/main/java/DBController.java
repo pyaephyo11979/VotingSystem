@@ -231,18 +231,28 @@ public class DBController {
 
     public List<Map<String, String>> getUserAccounts(String eventId) {
         List<Map<String, String>> accounts = new ArrayList<>();
-        Map<String, String> userAccounts = new HashMap<>();
-        String query = "SELECT id,username,password FROM users WHERE event_id = ?";
+        String query = "SELECT id, username, password, event_id FROM users WHERE event_id = ?";
         try (Connection conn = getConnection();
                 PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, eventId);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                String psw = decryptPassword(rs.getString("password"));
-                userAccounts.put("userId", rs.getString("id"));
-                userAccounts.put("username", rs.getString("username"));
-                userAccounts.put("password", psw);
-                accounts.add(userAccounts);
+            try (ResultSet rs = stmt.executeQuery()) {
+                int count = 0;
+                while (rs.next()) {
+                    Map<String, String> userMap = new HashMap<>(); // NEW MAP EACH ROW
+                    String decryptedPassword;
+                    try {
+                        decryptedPassword = decryptPassword(rs.getString("password"));
+                    } catch (Exception ex) {
+                        decryptedPassword = ""; // fallback; don't abort whole list
+                    }
+                    userMap.put("userId", rs.getString("id"));
+                    userMap.put("username", rs.getString("username"));
+                    userMap.put("password", decryptedPassword);
+                    userMap.put("eventId", rs.getString("event_id"));
+                    accounts.add(userMap);
+                    count++;
+                }
+                System.out.println("✅ Database: fetched " + count + " user account(s) for event " + eventId);
             }
         } catch (Exception e) {
             System.err.println("❌ Database error in getUserAccounts: " + e.getMessage());

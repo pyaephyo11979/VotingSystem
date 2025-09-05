@@ -9,7 +9,7 @@ const base_url = envBase || window.__API_BASE_URL__ || "http://localhost:8080/ap
 interface ApiErrorEnvelope { code: string; message: string }
 interface StandardResponse<T> { success: boolean; data?: T; error?: ApiErrorEnvelope }
 interface CandidateDto { id?: string; candidateId?: string; name?: string; candidateName?: string; photo?: string; image?: string }
-interface AccountDto { username: string; userId: string; password: string; eventId: string }
+interface AccountDto { username: string; userId: string; password?: string; eventId: string }
 
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -100,9 +100,62 @@ export const createAccounts = (eventId: string, eventSize: number) => request<{e
   }
 );
 
-export const getAccounts = (eventId: string) => request<{eventId:string; totalAccounts:number; accounts:Record<string,string>}>(
-  `${base_url}/${eventId}/accounts`
-);
+// Backend returns: { eventId, totalAccounts, accounts: AccountDto[] }
+// (legacy expectation was Record<string,string>; keep runtime guard to normalize)
+interface AccountsMetaResponse { eventId: string; totalAccounts: number; accounts?: unknown; __accounts_json?: string }
+export const getAccounts = async (eventId: string) => {
+  const meta = await request<AccountsMetaResponse>(`${base_url}/${eventId}/accounts`);
+  if (typeof meta.__accounts_json === 'string') {
+    try {
+      const arrParsed = JSON.parse(meta.__accounts_json) as unknown;
+      if (Array.isArray(arrParsed)) {
+        const cleaned: AccountDto[] = arrParsed.map(o => {
+          const obj = o as Record<string, unknown>;
+          return {
+            userId: String(obj.userId ?? ''),
+            username: String(obj.username ?? ''),
+            password: obj.password ? String(obj.password) : undefined,
+            eventId: String(obj.eventId ?? meta.eventId)
+          };
+        });
+        return { eventId: meta.eventId, totalAccounts: meta.totalAccounts, accounts: cleaned };
+      }
+    } catch { /* parse fallback */ }
+  }
+  if (Array.isArray(meta.accounts)) {
+    const cleaned: AccountDto[] = (meta.accounts as unknown[]).map(o => {
+      const obj = o as Record<string, unknown>;
+      return {
+        userId: String(obj.userId ?? ''),
+        username: String(obj.username ?? ''),
+        password: obj.password ? String(obj.password) : undefined,
+        eventId: String(obj.eventId ?? meta.eventId)
+      };
+    });
+    return { eventId: meta.eventId, totalAccounts: meta.totalAccounts, accounts: cleaned };
+  }
+  const rec = (meta.accounts as Record<string, unknown>) || {};
+  const parsed: AccountDto[] = Object.entries(rec).map(([k, val]) => {
+    if (val && typeof val === 'object') {
+      const vObj = val as Record<String, unknown>;
+      return {
+        userId: String(vObj.userId ?? k),
+        username: String(vObj.username ?? ''),
+        password: vObj.password ? String(vObj.password) : undefined,
+        eventId: String(vObj.eventId ?? meta.eventId)
+      };
+    }
+    const str = String(val);
+    const r1 = /UserID:\s*(\S+)\s+Password:\s*(\S+)/i.exec(str);
+    if (r1) return { userId: r1[1], password: r1[2], username: '', eventId: meta.eventId };
+    const r2 = /ID:\s*(\S+)\s*\|\s*Password:\s*(\S+)/i.exec(str);
+    if (r2) return { userId: r2[1], password: r2[2], username: '', eventId: meta.eventId };
+    const r3 = /(\S+)[:|](\S+)[:|](\S+)/.exec(str);
+    if (r3) return { userId: r3[1], username: r3[2], password: r3[3], eventId: meta.eventId };
+    return { userId: k, username: str, eventId: meta.eventId };
+  });
+  return { eventId: meta.eventId, totalAccounts: meta.totalAccounts, accounts: parsed };
+};
 
 // Results
 export const getResults = (eventId: string) => request<{eventId:string; totalVotes:number; results:Record<string,number>}>(
