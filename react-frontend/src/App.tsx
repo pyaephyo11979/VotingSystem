@@ -12,6 +12,7 @@ function AppShell() {
   const location = useLocation();
   const { show } = useToast();
 
+
   useEffect(() => {
     const stored = localStorage.getItem('eventData');
     if (stored) {
@@ -60,8 +61,11 @@ function AppShell() {
           )}
         </div>
       </header>
+
       <main className="flex-1 justify-center items-center p-4 w-full">
-        <Outlet context={{ eventData, setEventData }} />
+          <div>
+            <Outlet context={{ eventData, setEventData }} />
+          </div>       
       </main>
     </div>
   );
