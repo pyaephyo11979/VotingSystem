@@ -36,7 +36,7 @@ function AppShell() {
   }, [location.pathname, eventData, navigate, show]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center">
+    <div className="h-screen bg-gray-100 flex flex-col items-center overflow-hidden">
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">
           <Link to="/">Voting System</Link><span className="ml-1">🎓</span>
@@ -62,8 +62,8 @@ function AppShell() {
         </div>
       </header>
 
-      <main className="flex-1 justify-center items-center p-4 w-full">
-          <div>
+      <main className="flex-1 w-full flex justify-center items-center overflow-hidden flex-shrink-0">
+          <div className='w-full h-full overflow-hidden'>
             <Outlet context={{ eventData, setEventData }} />
           </div>       
       </main>
