@@ -13,7 +13,6 @@ export default function LoginPage() {
     try {
   const data = await loginUser(username, password);
   localStorage.setItem("eventId", data.eventId);
-  localStorage.setItem("eventPassword", data.eventPassword);
   localStorage.setItem("userId", data.userId);
   const eventData = { eventId: data.eventId, eventPassword: data.eventPassword, eventName: data.eventName };
   try { localStorage.setItem('eventData', JSON.stringify(eventData)); } catch {/* ignore */ }

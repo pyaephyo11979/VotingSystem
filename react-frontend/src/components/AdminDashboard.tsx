@@ -7,6 +7,8 @@ import AccountsSection from "@/components/ui/AccountsSection";
 import ResultsSection from "@/components/ui/ResultsSection";
 import { Link } from 'react-router-dom';
 import VoteStatusChecker from "@/components/ui/VoteStatusChecker";
+import {useTranslation} from "react-i18next";
+
 
 interface EventData { eventId: string; eventName?: string; eventPassword?: string; }
 interface Candidate { id?: string; candidateId?: string; name?: string; photo?: string | null; image?: string }
@@ -23,6 +25,7 @@ const AdminDashboard = () => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const {t} = useTranslation();
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -64,10 +67,10 @@ const AdminDashboard = () => {
     return (
       <div className="flex flex-col items-center justify-center flex-1 p-4 w-full">
         <div className="w-full max-w-4xl flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <button onClick={handleLogout} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Back</button>
+          <h1 className="text-2xl font-bold">{t('dashboard')}</h1>
+          <button onClick={handleLogout} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">{t('back')}</button>
         </div>
-        <p>Please create or access an event first to access the admin dashboard.</p>
+        <p>{t('dashboard_403')}</p>
       </div>
     );
   }
@@ -76,12 +79,12 @@ const AdminDashboard = () => {
     <div className="flex flex-col items-center justify-center flex-1 p-4 w-full">
       <div className="w-full max-w-6xl flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold">{t('dashboard')}</h1>
           <h2 className="text-lg font-medium">Event ID: {eventId}</h2>
         </div>
         <div className='flex gap-2'>
-          {eventId && <Link to={`/results/${eventId}`} className='px-3 py-1 h-fit rounded bg-blue-600 text-white text-sm hover:bg-blue-700'>Live Results</Link>}
-          <button onClick={handleLogout} className="px-3 py-1 h-fit rounded bg-red-600 text-white text-sm hover:bg-red-700">Logout</button>
+          {eventId && <Link to={`/results/${eventId}`} className='px-3 py-1 h-fit rounded bg-blue-600 text-white text-sm hover:bg-blue-700'>{t('live')}</Link>}
+          <button onClick={handleLogout} className="px-3 py-1 h-fit rounded bg-red-600 text-white text-sm hover:bg-red-700">{t('logout')}</button>
         </div>
       </div>
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

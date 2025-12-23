@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { loginUser } from "@/utils/api";
 import { useNavigate } from "react-router-dom";
+import {useTranslation} from "react-i18next";
+import {EyeIcon,EyeClosedIcon} from 'lucide-react';
 
 export function LoginCard() {
   const [username, setUsername] = useState("");
@@ -13,6 +15,7 @@ export function LoginCard() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const {t} = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,17 +40,17 @@ export function LoginCard() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-bold">Voter Login</CardTitle>
-          <CardDescription>Enter your username and password</CardDescription>
+          <CardTitle className="text-xl font-bold">{t('voterLogin')}</CardTitle>
+          <CardDescription>{t('login_phrase')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">{t('username')}</Label>
               <Input id="username" value={username} onChange={e=>setUsername(e.target.value)} required className="outline-none focus-visible:ring-0" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('password')}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -64,7 +67,7 @@ export function LoginCard() {
                   className="absolute inset-y-0 right-2 text-xs font-medium text-gray-600 hover:text-gray-800"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  {showPassword ? <EyeIcon/> : <EyeClosedIcon/>}
                 </button>
               </div>
             </div>
@@ -73,7 +76,7 @@ export function LoginCard() {
           </form>
         </CardContent>
         <CardFooter>
-          <p className="text-xs text-gray-500 w-full text-center">Use credentials provided by admin</p>
+          <p className="text-xs text-gray-500 w-full text-center">{t('use')}</p>
         </CardFooter>
       </Card>
     </div>

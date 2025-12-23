@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from 'react-router-dom';
 import { getVoterCandidates, castVote, getVoteStatus } from "@/utils/api";
+import {useTranslation} from "react-i18next";
 
 interface Candidate { id?: string; name: string; photo?: string|null }
 interface CandidateApi { id?: string; candidateId?: string; name?: string; candidateName?: string; photo?: string; image?: string }
@@ -14,6 +15,7 @@ export default function VotingPage() {
   const [eventMeta, setEventMeta] = useState<{ eventId: string; eventName?: string }|null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
   const navigate = useNavigate();
+  const {t} = useTranslation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,13 +85,13 @@ export default function VotingPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
-      <h1 className="text-3xl font-bold mb-2">Cast Your Vote</h1>
+      <h1 className="text-3xl font-bold mb-2">{t('cast')}</h1>
       {eventMeta && <p className="text-gray-600 mb-6">Event ID: <span className="font-mono">{eventMeta.eventId}</span></p>}
   {error && <p className="text-red-500 mb-4">{error}</p>}
-  {success && <p className="text-green-600 mb-4">Your vote has been recorded. Thank you!</p>}
+  {success && <p className="text-green-600 mb-4">{t('recorded')}</p>}
       <div className="w-full max-w-4xl flex justify-end mb-4">
         {eventMeta && (
-          <Link to={`/results/${eventMeta.eventId}`} className="text-sm text-blue-600 hover:underline">View Live Results →</Link>
+          <Link to={`/results/${eventMeta.eventId}`} className="text-sm text-blue-600 hover:underline">{t('view')}→</Link>
         )}
       </div>
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-4xl w-full mb-8">
@@ -112,7 +114,7 @@ export default function VotingPage() {
                 )}
               </div>
               <span className="font-medium text-gray-900 mb-1">{candidate.name}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${selected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{selected ? 'Selected' : 'Tap to Select'}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${selected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{selected ? t('selected') : t('tap2select')}</span>
             </button>
           );
         })}
@@ -122,7 +124,7 @@ export default function VotingPage() {
         disabled={!selectedCandidate || isSubmitting || success}
         className="bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition font-semibold shadow"
       >
-        {success ? 'Vote Submitted' : isSubmitting ? 'Submitting Vote...' : 'Submit Vote'}
+        {success ? t('submitted') : isSubmitting ? t('submitting') : t('submitVote')}
       </button>
     </div>
   );

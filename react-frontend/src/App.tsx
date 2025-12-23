@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 import { useToast } from '@/components/ui/useToast';
-import router from "@/router";
+import {LanguagesIcon} from "lucide-react";
+import '@/utils/i18n';
+import {useTranslation} from "react-i18next";
+
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+} from "@/components/ui/select"
 
 interface EventData { eventId: string; eventName?: string; eventPassword?: string }
 
@@ -10,7 +20,9 @@ function AppShell() {
   const [eventData, setEventData] = useState<EventData|null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const {t,i18n} = useTranslation();
   const { show } = useToast();
+  const isUserLoggedIn = Boolean(localStorage.getItem('userId'));
 
 
   useEffect(() => {
@@ -35,6 +47,10 @@ function AppShell() {
   // Guards removed: no navigation enforcement.
   }, [location.pathname, eventData, navigate, show]);
 
+  const changeLanguage = (lng:string) => {
+      i18n.changeLanguage(lng);
+  }
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col items-center overflow-hidden">
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
@@ -42,12 +58,16 @@ function AppShell() {
           <Link to="/">Voting System</Link><span className="ml-1">🎓</span>
         </h1>
         <div className="space-x-3 flex items-center">
-          <Link to={eventData ? `/admin/${eventData.eventId}` : '/admin'}>
-            <button className="bg-gray-900 text-white px-4 py-1 rounded hover:bg-gray-700">Admin Dashboard</button>
-          </Link>
-          <Link to="/login">
-            <button className="bg-gray-900 text-white px-4 py-1 rounded hover:bg-gray-700">Login</button>
-          </Link>
+            {!isUserLoggedIn && (<>
+                <Link to={eventData ? `/admin/${eventData.eventId}` : '/admin'}>
+                    <button className="bg-gray-900 text-white px-4 py-1 rounded hover:bg-gray-700">{t('dashboard')}</button>
+                </Link>
+                <Link to="/login">
+                    <button className="bg-gray-900 text-white px-4 py-1 rounded hover:bg-gray-700">{t('voter_login')}</button>
+                </Link>
+                </>
+            )
+            }
           {localStorage.getItem('userId') && (
             <button type={'button'} onClick={() => {
               try {
@@ -55,10 +75,21 @@ function AppShell() {
                 localStorage.removeItem('username');
                 navigate('/login');
               } catch {/* ignore */}
-              show('Logged out', { type: 'info' });
+              show(t('logged_out'), { type: 'info' });
               if (location.pathname.startsWith('/vote')) navigate('/login');
-            }} className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Voter Logout</button>
+            }} className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">{t('voter_logout')}</button>
           )}
+            <Select  onValueChange={(value: string) => changeLanguage(value)} defaultValue={i18n.language ?? 'en'} >
+                 <SelectTrigger className={"bg-black"}>
+                     <LanguagesIcon className="w-5 h-5  text-white" />
+                 </SelectTrigger>
+                 <SelectContent>
+                     <SelectGroup>
+                         <SelectItem value="en">English</SelectItem>
+                         <SelectItem value="mm">မြန်မာ</SelectItem>
+                     </SelectGroup>
+                 </SelectContent>
+             </Select>
         </div>
       </header>
 
