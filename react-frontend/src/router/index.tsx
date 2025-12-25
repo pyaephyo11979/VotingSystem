@@ -21,9 +21,9 @@ const router = createBrowserRouter([
         path: "/login",
         element: <LoginCard />,
       },
-  { path: "/vote", element: <VotingPage /> },
-  { path: "/admin/:eventId", element: <AdminDashboard /> },
-  { path: "/admin", element: <AdminDashboard /> },
+      { path: "/vote", element: <VotingPage /> },
+      { path: "/admin/:eventId", element: <AdminDashboard /> },
+      { path: "/admin", element: <AdminDashboard /> },
       {
         path: "/results/:eventId",
         element: <ResultsLivePage />,

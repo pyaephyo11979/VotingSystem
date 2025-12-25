@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-interface EventInfoProps { event: { eventId: string; eventPassword: string; eventName?: string }; setOpen: (open: boolean)=>void }
+interface EventInfoProps {
+  event: { eventId: string; eventPassword: string; eventName?: string };
+  setOpen: (open: boolean) => void;
+}
 
 export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
   const [copied, setCopied] = useState(false);
@@ -21,7 +24,7 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
       const success = document.execCommand("copy");
       document.body.removeChild(textarea);
       return success;
-  } catch {
+    } catch {
       return false;
     }
   };
@@ -30,7 +33,11 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
     const credentials = `Event ID: ${event.eventId}\nPassword: ${event.eventPassword}`;
     setCopyError(null);
     try {
-      if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
         await navigator.clipboard.writeText(credentials);
         setCopied(true);
       } else {
@@ -82,7 +89,9 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
           Copy the credentials to access admin portal
         </p>
         {copyError && (
-          <p className="text-xs text-red-600 mb-2" role="alert">{copyError}</p>
+          <p className="text-xs text-red-600 mb-2" role="alert">
+            {copyError}
+          </p>
         )}
 
         {/* Event ID */}
@@ -113,7 +122,7 @@ export default function EventCreatedCard({ event, setOpen }: EventInfoProps) {
             />
             <button
               type="button"
-              onClick={() => setShowPassword(p => !p)}
+              onClick={() => setShowPassword((p) => !p)}
               className="absolute inset-y-0 right-2 flex items-center text-xs font-medium text-gray-600 hover:text-gray-800"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
