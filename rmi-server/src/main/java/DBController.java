@@ -217,6 +217,7 @@ public class DBController {
     }
 
     public boolean deleteCandidate(String eventId, String candidateId) {
+        // Ensure we match both candidate id and event id to avoid accidental cross-event deletions
         String query = "DELETE FROM candidates WHERE id = ? AND event_id = ?";
         try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setInt(1, Integer.parseInt(candidateId));

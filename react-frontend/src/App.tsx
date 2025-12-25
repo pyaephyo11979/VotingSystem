@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/useToast';
 import {GlobeIcon} from "lucide-react";
 import '@/utils/i18n';
 import {useTranslation} from "react-i18next";
+import {Snowfall} from "react-snowfall";
 
 interface EventData { eventId: string; eventName?: string; eventPassword?: string }
 
@@ -73,6 +74,7 @@ function AppShell() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col items-center overflow-hidden">
+        <Snowfall color={'white'}/>
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">
           <Link to="/">Voting System</Link><span className="ml-1">🎓</span>

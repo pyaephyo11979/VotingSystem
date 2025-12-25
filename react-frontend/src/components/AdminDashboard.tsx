@@ -93,7 +93,8 @@ const AdminDashboard = () => {
           {isLoading && <p>Loading candidates...</p>}
           {error && <p className="text-red-500">{error}</p>}
           {!isLoading && !error && <CandidateList 
-            candidates={candidates} 
+            eventId={eventId}
+            candidates={candidates}
             onUpdated={(id, partial)=>setCandidates(prev=>prev.map(c=> (c.id===id? {...c, ...partial}: c)))}
             onDeleted={(id)=>setCandidates(prev=>prev.filter(c=>c.id!==id))}
           />}

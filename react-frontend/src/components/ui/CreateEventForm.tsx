@@ -51,7 +51,7 @@ const CreateEventForm = () => {
             className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button type="submit" className="bg-gray-900 text-white px-4 py-2 rounded hover:bg-gray-700" disabled={isLoading}>
-            {isLoading ? t("creating"): t("create")}
+            {isLoading ? t("event_creating"): t("event_create")}
           </button>
         </div>
         {error && <p className="text-red-500 mt-2">{error}</p>}
