@@ -55,7 +55,7 @@ export function LoginCard() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <div className="h-screen flex items-center justify-center bg-gray-100 overflow-hidden">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-bold">{t("voterLogin")}</CardTitle>
