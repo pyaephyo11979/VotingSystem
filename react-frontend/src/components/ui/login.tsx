@@ -97,7 +97,7 @@ export function LoginCard() {
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+              {loading ? t('logging_in') : t('voter_login')}
             </Button>
           </form>
         </CardContent>
