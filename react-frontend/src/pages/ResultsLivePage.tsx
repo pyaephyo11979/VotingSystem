@@ -60,12 +60,6 @@ export default function ResultsLivePage() {
           >
             Refresh
           </button>
-          <Link
-            to={"/"}
-            className="px-4 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
-          >
-            Home
-          </Link>
           <button
             onClick={() => navigate(-1)}
             className="px-3 py-2 text-sm rounded bg-gray-200 hover:bg-gray-300 text-gray-800"
