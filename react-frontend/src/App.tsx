@@ -100,7 +100,6 @@ function AppShell() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col items-center overflow-hidden">
-      <Snowfall color={"white"} />
       <header className="w-full bg-gray-200 px-6 py-3 flex justify-between items-center shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900">
           <Link to="/">Voting System</Link>
