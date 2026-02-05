@@ -1,170 +1,134 @@
-# University of Computer Studies Pathein - Voting System
+# University of Computer Studies Pathein – Voting System
 
-## 🎓 Complete Digital Voting Solution
+A modular voting platform composed of an RMI microservice (business logic + database access), a Spring Boot API layer, and an optional Vite/React frontend. This document walks through the exact manual steps to run the backend stack (no Docker required).
 
-A comprehensive, secure, and user-friendly digital voting system designed specifically for the University of Computer Studies Pathein. This system provides a complete solution for conducting elections, polls, and voting events within the university community.
+## Module Overview
 
-## 🏗️ System Architecture
+| Layer | Folder | Description |
+| --- | --- | --- |
+| Shared contracts | [shared](shared) | `VotingService`, `EventInfo`, and other DTOs consumed by both JVM services |
+| RMI microservice | [rmi-server](rmi-server) | Core voting logic, AES password encryption, direct MySQL access |
+| REST bridge | [api-bridge](api-bridge) | Spring Boot 3 API exposing REST endpoints to browsers and the frontend |
+| React client (optional) | [react-frontend](react-frontend) | Admin dashboard, voter UI, live results | 
 
-### Backend Components
+## Prerequisites
 
-- **RMI Server** (`rmi-server/`) - Core voting logic and database operations
-- **API Bridge** (`api-bridge/`) - RESTful API layer using Spring Boot
-- **Shared Module** (`shared/`) - Common data models and interfaces
-- **Database** - MySQL with encrypted password storage
+- Java 17+ (to run Spring Boot) and Java 15+ (to compile the standalone RMI module)
+- Maven 3.9+
+- Node.js 20+ (only if you plan to run the React frontend)
+- MySQL 8.x reachable at `localhost:3306`
 
-### Frontend Components
+## End-to-End Setup (Manual)
 
-- **React UI** (`react-frontend/`) - Modern, responsive web interface
-- **Admin Dashboard** - Event and candidate management
-- **Voter Interface** - Secure voting experience
-- **Real-time Results** - Live vote counting and visualization
-
-## 🚀 Key Features
-
-### 🔐 Security & Authentication
-
-- **Encrypted Passwords** - AES-256 encryption for all user credentials
-- **Secure Database** - MySQL with prepared statements preventing SQL injection
-- **User Authentication** - Individual login credentials for each voter
-- **Event Access Control** - Password-protected voting events
-
-### 👨‍💼 Administrative Features
-
-- **Event Creation** - Create voting events with unique IDs and passwords
-- **Candidate Management** - Add candidates with photos and descriptions
-- **User Account Generation** - Bulk creation of voter accounts with credentials
-- **Account Distribution** - Print or download user credentials for distribution
-- **Real-time Monitoring** - Live vote tracking and result visualization
-
-### 🗳️ Voting Experience
-
-- **Intuitive Interface** - Clean, user-friendly voting interface
-- **Candidate Photos** - Visual candidate identification
-- **Vote Confirmation** - Clear confirmation of cast votes
-- **Mobile Responsive** - Works on all devices (desktop, tablet, mobile)
-- **Accessibility** - Designed for users with varying technical skills
-
-### 📊 Results & Analytics
-
-- **Live Results** - Real-time vote counting and percentage calculations
-- **Visual Charts** - Progress bars and ranking displays
-- **Auto-refresh** - Automatic result updates every 5 seconds
-- **Export Options** - Download results and account data
-
-## 🛠️ Technology Stack
-
-### Backend Technologies
-
-- **Java 11+** - Core programming language
-- **Spring Boot 2.7+** - Web framework and dependency injection
-- **RMI (Remote Method Invocation)** - Distributed computing
-- **MySQL 8.0** - Database management system
-- **Maven** - Build and dependency management
-
-### Frontend Technologies
-
-- **React 19** - Modern JavaScript UI library
-- **Vite** - Fast build tool and development server
-- **Modern CSS** - Responsive design with CSS Grid and Flexbox
-- **Fetch API** - HTTP client for backend communication
-
-### Infrastructure
-
-- **Docker** - Containerization for MySQL database
-- **CORS** - Cross-origin resource sharing configuration
-- **RESTful APIs** - Standard HTTP methods and JSON responses
-
-## 📋 System Workflow
-
-### 1. Event Setup (Administrator)
-
-```
-Create Event → Add Candidates → Generate User Accounts → Distribute Credentials
+### 1. Clone the repo and install shared contracts
+```bash
+git clone https://github.com/pyaephyo11979/VotingSystem.git
+cd VotingSystem
+mvn -pl shared clean install   # publishes org.example:shared to ~/.m2
 ```
 
-### 2. Voting Process (Students)
+### 2. Prepare the MySQL schema
+1. Create a schema named `votingdb` and grant a user (`root`/`root` by default in code) full access.
+2. Seed the tables:
+  ```bash
+  mysql -h localhost -u root -p votingdb < rmi-server/src/main/resources/init-database.sql
+  ```
+  The same structure exists in [rmi-server/src/main/java/SchemaCreator.java](rmi-server/src/main/java/SchemaCreator.java) if you prefer a Java-based creator.
 
+### 3. Configure the RMI microservice
+1. Open [rmi-server/src/main/java/DBController.java](rmi-server/src/main/java/DBController.java).
+2. Update the `url`, `username`, `password`, and `SECRET` constants so they match your MySQL instance and 32-char AES secret.
+3. (Optional) Adjust the registry host exposing RMI by exporting `RMI_HOST` before launch. The default host is `0.0.0.0` and the registry port is `1099` (see [rmi-server/src/main/java/Server.java](rmi-server/src/main/java/Server.java)).
+
+### 4. Run the RMI microservice
+```bash
+cd rmi-server
+mvn compile exec:java -Dexec.mainClass=Server
 ```
-Login → Access Event → View Candidates → Cast Vote → Receive Confirmation
+You should see `✅ RMI Server is running...` in the console along with future log lines from [VotingServiceImpl](rmi-server/src/main/java/VotingServiceImpl.java).
+
+### 5. Configure the Spring Boot API bridge
+1. Open [api-bridge/src/main/resources/application.properties](api-bridge/src/main/resources/application.properties).
+2. Set `rmi.server.host` and `rmi.server.port` if the RMI service is running on a different machine.
+3. For browser access, list the allowed origins in `app.cors.allowed-origins` (comma-separated). Use `http://localhost:5173` while developing the React client.
+
+### 6. Run the Spring Boot API bridge
+```bash
+cd api-bridge
+mvn spring-boot:run
+```
+When the app starts it will log `Looking up RMI service at rmi://HOST:PORT/VotingService`. The REST endpoints are implemented in [api-bridge/src/main/java/org/example/apibridge/controller/VotingController.java](api-bridge/src/main/java/org/example/apibridge/controller/VotingController.java).
+
+### 7. (Optional) Run the React frontend
+```bash
+cd react-frontend
+npm install
+VITE_API_BASE_URL=http://localhost:8080/api/events npm run dev -- --host 0.0.0.0 --port 5173
+```
+The frontend consumes the REST endpoints through [react-frontend/src/utils/api.ts](react-frontend/src/utils/api.ts). Skip this step if you only need the backend.
+
+### 8. Create an event and seed data
+1. Create an event:
+  ```bash
+  curl -X POST http://localhost:8080/api/events/create \
+      -H "Content-Type: application/json" \
+      -d '{"eventName":"Student Council 2026"}'
+  ```
+  Response example: `{ "data": { "eventId": "AB12CD34", "eventName": "Student Council 2026", "eventPassword": "3F8A1C" } }`.
+2. Add candidates (multipart for optional photos):
+  ```bash
+  curl -X POST http://localhost:8080/api/events/AB12CD34/candidates \
+      -F name="Alice" -F photo=@/path/to/photo.jpg
+  ```
+3. Generate accounts to distribute to voters:
+  ```bash
+  curl -X POST http://localhost:8080/api/events/AB12CD34/accounts \
+      -H "Content-Type: application/json" \
+      -d '{"eventSize": 100}'
+  ```
+
+### 9. Voting flow (manual test)
+1. Login: `POST /api/events/login` with `{ "username": "generatedUser", "password": "plainPassword" }`.
+2. Load ballot: `GET /api/events/AB12CD34/candidates?password=EVENT_PASSWORD`.
+3. Cast vote: `POST /api/events/AB12CD34/vote` with `{ "userId": "...", "candidateId": "..." }`.
+4. Confirm status: `GET /api/events/AB12CD34/vote-status/{userId}`.
+5. Monitor results: `GET /api/events/AB12CD34/results` for aggregate counts.
+
+## API Cheat Sheet
+
+| Endpoint | Description |
+| --- | --- |
+| `/api/events/create` | Create event and return `eventId`, `eventPassword` |
+| `/api/events/{eventId}/candidates` | POST add, PUT update, DELETE remove, GET list candidates |
+| `/api/events/{eventId}/accounts` | POST bulk-generate login credentials, GET list | 
+| `/api/events/login` | Validate username/password via `VotingService.Login` |
+| `/api/events/{eventId}/vote` | Cast vote; rejects duplicates with `ALREADY_VOTED` |
+| `/api/events/{eventId}/results` | Aggregate vote totals per candidate |
+| `/api/events/{eventId}/vote-status/{userId}` | Check if a given user already voted |
+| `/api/events/{eventId}/candidates?password=...` | Public ballot retrieval for voters |
+
+## Troubleshooting
+
+- `IllegalStateException: RMI service unavailable`: ensure the RMI process is running, the host/port in [application.properties](api-bridge/src/main/resources/application.properties) is correct, and no firewall blocks port `1099`.
+- `Communications link failure` in `DBController`: verify MySQL is listening on `localhost:3306`, credentials in [DBController](rmi-server/src/main/java/DBController.java) are valid, and the schema contains the required tables.
+- Voters always “already voted”: clear the `votes` table or use unique `userId` values per event. The schema enforces a composite key `(user_id, event_id)`.
+- Photos missing on the frontend: confirm the `photo` column is `MEDIUMBLOB` and the upload request actually includes a file.
+
+## Useful Commands
+
+```bash
+# Build every Maven module
+mvn clean install
+
+# Run only the API bridge with tests skipped
+cd api-bridge && mvn spring-boot:run -DskipTests
+
+# Run unit tests for the backend modules
+cd api-bridge && mvn test
+cd rmi-server && mvn test
+
+# Frontend production bundle
+cd react-frontend && npm run build && npm run preview
 ```
 
-### 3. Results Monitoring (Administrator)
-
-```
-Monitor Live Results → View Analytics → Export Data
-```
-
-## 🎯 Use Cases
-
-### Student Council Elections
-
-- **Candidates**: Student council positions (President, Vice President, Secretary, etc.)
-- **Voters**: All enrolled students
-- **Features**: Candidate photos, manifestos, real-time results
-
-### Faculty Surveys
-
-- **Topics**: Course feedback, facility improvements, policy decisions
-- **Voters**: Faculty members and staff
-- **Features**: Anonymous voting, detailed analytics
-
-### Department Polls
-
-- **Decisions**: Event planning, resource allocation, schedule changes
-- **Voters**: Department-specific groups
-- **Features**: Quick setup, instant results
-
-### University-wide Referendums
-
-- **Issues**: Major policy changes, infrastructure decisions
-- **Voters**: Entire university community
-- **Features**: Large-scale account management, comprehensive reporting
-
-## 🔧 Installation & Setup
-
-### Prerequisites
-
-- Java 11 or higher
-- Node.js 16 or higher
-- MySQL 8.0
-- Maven 3.6+
-- Docker (optional)
-
-### Quick Start
-
-1. **Database Setup**
-
-   ```bash
-   docker compose up mysql -d
-   mysql -u root -p'root' < rmi-server/src/main/resources/init-database.sql
-   ```
-
-2. **Backend Services**
-
-   ```bash
-   # Start RMI Server
-   cd rmi-server && mvn compile exec:java -Dexec.mainClass="Server"
-
-   # Start API Bridge
-   cd api-bridge && mvn spring-boot:run
-   ```
-
-3. **Frontend Application**
-
-   ```bash
-   cd react-frontend && npm install && npm run dev
-   ```
-
-4. **Access the System**
-    - Frontend: http://localhost:5127
-    - API: http://localhost:8080
-
-## 🏆 Conclusion
-
-The University of Computer Studies Pathein Voting System represents a modern, secure, and user-friendly solution for digital democracy within the university community. By combining robust backend security with an intuitive frontend interface, the system ensures both the integrity of the voting process and the accessibility of democratic participation.
-
-This comprehensive solution not only serves the immediate needs of university elections but also provides a foundation for future enhancements and integrations, making it a valuable long-term investment in the university's digital infrastructure.
-
-**University of Computer Studies Pathein**  
-_Empowering Digital Democracy Through Technology_
+With the steps above you can run the University of Computer Studies Pathein Voting System entirely on bare metal and iterate on either the RMI or Spring Boot layers with confidence.
